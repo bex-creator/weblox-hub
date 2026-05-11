@@ -1044,6 +1044,7 @@
                         }
                         player.userData.targetPos.set(data.x, data.y - 9, data.z); 
                         player.userData.targetRot = data.ry;
+                        player.userData.isJumping = data.jumping || false;
                         player.userData.lastUpdate = Date.now();
                     });
                 }, (err) => console.warn("Multiplayer sync error", err));
@@ -1118,7 +1119,7 @@
                     lastSyncPos.copy(pos);
                     try {
                         const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
-                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, time: Date.now(), avatar: myAvatarColors });
+                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors });
                     } catch(e) {} 
                 }
             }, 150);
@@ -1138,14 +1139,9 @@
                     if(now - otherPlayers[id].userData.lastUpdate > 5000) {
                         scene.remove(otherPlayers[id]);
                         delete otherPlayers[id];
-                    } else {
-                        // Smoothly interpolate other players
-                        const p = otherPlayers[id];
-                        p.position.lerp(p.userData.targetPos, 0.2);
-                        p.rotation.y += (p.userData.targetRot - p.rotation.y) * 0.2;
                     }
                 }
-            }, 1000/30); // 30fps interp tick
+            }, 2000);
         }
 
         // --- CONTROLS & INTERACTION ---
@@ -1577,7 +1573,8 @@
                     meshGroup.userData.limbs[1].rotation.z += (-0.5 - meshGroup.userData.limbs[1].rotation.z) * 0.2;
                     meshGroup.userData.joints.forEach(j => j.rotation.x *= 0.8);
                 } else if (walkSpeed > 10) {
-                    const walkCycle = time * (isSprinting ? 0.025 : 0.015);
+                    const animSpeed = walkSpeed > 450 ? 0.025 : 0.015;
+                    const walkCycle = time * animSpeed;
                     meshGroup.userData.limbs[0].rotation.x = Math.sin(walkCycle) * 0.8;
                     meshGroup.userData.limbs[1].rotation.x = -Math.sin(walkCycle) * 0.8;
                     meshGroup.userData.limbs[2].rotation.x = -Math.sin(walkCycle) * 0.8;
@@ -1614,6 +1611,23 @@
             }
 
             playerObject.rotation.y = cameraYaw;
+
+            // Animate remote players
+            for(let id in otherPlayers) {
+                const p = otherPlayers[id];
+                const oldPos = p.position.clone();
+                p.position.lerp(p.userData.targetPos, 15 * delta);
+                
+                // Wrap rotation to take shortest path instead of spinning wildly
+                let diff = p.userData.targetRot - p.rotation.y;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                p.rotation.y += diff * 15 * delta;
+                
+                const distMoved = Math.sqrt(Math.pow(p.position.x - oldPos.x, 2) + Math.pow(p.position.z - oldPos.z, 2));
+                const remoteWalkSpeed = distMoved / delta;
+                animateRig(p, remoteWalkSpeed, p.userData.isJumping);
+            }
 
             // Render Equipped Tool visually
             if (equippedToolMesh) {
