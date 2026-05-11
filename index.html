@@ -1474,7 +1474,7 @@
                 }
             }
 
-            let targetFov = isSSprintting ? 95 : 75;
+            let targetFov = isSprinting ? 95 : 75;
             camera.fov += (targetFov - camera.fov) * 0.1; camera.updateProjectionMatrix();
             thirdPersonCamera.fov += (targetFov - thirdPersonCamera.fov) * 0.1; thirdPersonCamera.updateProjectionMatrix();
 
@@ -1667,6 +1667,7 @@
             document.getElementById('current-game-title').innerText = gameData.name;
             document.getElementById('current-game-author').innerText = "By " + gameData.author;
             
+            prevTime = performance.now();
             isInGame = true;
             window.clearLevel(false);
             
