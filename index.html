@@ -107,6 +107,7 @@
                 <nav class="hidden lg:flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5">
                     <a href="#" onclick="window.showNotification('Discover refreshed!'); window.fetchCommunityGames(); return false;" class="px-6 py-2.5 bg-white/10 text-white rounded-xl font-bold shadow-sm backdrop-blur-md flex items-center gap-2 transition-all"><span class="text-lg">🧭</span> Discover</a>
                     <a href="#" onclick="window.showAvatarModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">👤</span> Avatar</a>
+                    <a href="#" onclick="window.showStoreModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">🎒</span> Store</a>
                     <a href="#" onclick="window.showHubChatModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">💬</span> Chat</a>
                 </nav>
             </div>
@@ -190,32 +191,105 @@
         </div>
     </div> <!-- END of hub -->
 
+    <!-- Store Modal -->
+    <div id="store-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/80 z-[300] text-white pointer-events-auto backdrop-blur-xl">
+        <div class="glass-panel rounded-3xl w-[800px] h-[700px] flex flex-col shadow-2xl overflow-hidden border border-white/10">
+            <div class="p-6 flex justify-between items-center border-b border-white/5 bg-white/5">
+                <h2 class="font-black text-2xl text-white tracking-tight flex items-center gap-3">🎒 Accessory Store</h2>
+                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-10 h-10 flex items-center justify-center rounded-full transition-all" onclick="window.closeStoreModal()">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="store-items-list" class="flex-1 overflow-y-auto p-6 grid grid-cols-3 gap-4 auto-rows-max">
+                <!-- Populated by JS -->
+                <div class="col-span-3 text-center text-gray-500 py-10">Loading Store...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Avatar Modal -->
     <div id="avatar-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/80 z-[300] text-white pointer-events-auto backdrop-blur-xl">
-        <div class="glass-panel p-10 rounded-3xl w-[540px] shadow-2xl transform scale-100 transition-transform">
+        <div class="glass-panel p-10 rounded-3xl w-[540px] shadow-2xl transform scale-100 transition-transform flex flex-col max-h-[90vh]">
             <h2 class="text-3xl font-black text-white mb-2 tracking-tight">Profile & Avatar Editor</h2>
-            <p class="text-sm text-gray-400 mb-6 font-medium">Customize your username and character colors.</p>
+            <p class="text-sm text-gray-400 mb-4 font-medium">Customize your username and character colors.</p>
             
-            <label class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block px-1">Username</label>
-            <input type="text" id="avatar-username" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 mb-6 text-white focus:outline-none focus:border-blue-500 transition-colors font-bold" placeholder="Enter username..." maxlength="16">
+            <div class="overflow-y-auto pr-2" style="max-height: 50vh;">
+                <label class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block px-1">Username</label>
+                <input type="text" id="avatar-username" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 mb-6 text-white focus:outline-none focus:border-blue-500 transition-colors font-bold" placeholder="Enter username..." maxlength="16">
 
-            <label class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block px-1">Body Colors</label>
-            <div class="grid grid-cols-4 gap-4 mb-8">
-                <button id="btn-part-head" class="avatar-part-btn aspect-square rounded-2xl border-4 border-blue-500 transition-all hover:-translate-y-1 shadow-lg" onclick="window.selectAvatarPart('head')"><span class="sr-only">Head</span></button>
-                <button id="btn-part-torso" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('torso')"><span class="sr-only">Torso</span></button>
-                <button id="btn-part-arms" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('arms')"><span class="sr-only">Arms</span></button>
-                <button id="btn-part-legs" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('legs')"><span class="sr-only">Legs</span></button>
+                <label class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block px-1">Body Colors</label>
+                <div class="grid grid-cols-4 gap-4 mb-2">
+                    <button id="btn-part-head" class="avatar-part-btn aspect-square rounded-2xl border-4 border-blue-500 transition-all hover:-translate-y-1 shadow-lg" onclick="window.selectAvatarPart('head')"><span class="sr-only">Head</span></button>
+                    <button id="btn-part-torso" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('torso')"><span class="sr-only">Torso</span></button>
+                    <button id="btn-part-arms" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('arms')"><span class="sr-only">Arms</span></button>
+                    <button id="btn-part-legs" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('legs')"><span class="sr-only">Legs</span></button>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 font-bold uppercase tracking-wider mb-4 px-2">
+                    <span>Head</span><span>Torso</span><span>Arms</span><span>Legs</span>
+                </div>
+                
+                <div id="avatar-palette" class="flex flex-wrap gap-4 justify-center mb-6"></div>
+
+                <div class="w-full h-px bg-white/10 mb-6"></div>
+
+                <div class="flex justify-between items-center mb-4">
+                    <label class="text-xs text-gray-500 font-bold uppercase tracking-wider px-1">Equipped Accessories</label>
+                    <button class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors" onclick="window.openAccessoryEditor()">+ Create</button>
+                </div>
+                <div id="equipped-accessories-list" class="flex flex-col gap-2 mb-4">
+                    <!-- JS populated -->
+                </div>
             </div>
-            <div class="flex justify-between text-xs text-gray-500 font-bold uppercase tracking-wider mb-4 px-2">
-                <span>Head</span><span>Torso</span><span>Arms</span><span>Legs</span>
+
+            <button class="w-full bg-white text-black hover:bg-gray-200 p-4 rounded-2xl font-bold text-lg transition-transform hover:scale-[1.02] shadow-xl mt-4" onclick="window.closeAvatarModal()">Save & Apply</button>
+        </div>
+    </div>
+
+    <!-- Accessory Editor Modal -->
+    <div id="accessory-editor-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/95 z-[400] text-white pointer-events-auto backdrop-blur-2xl">
+        <div class="glass-panel rounded-3xl w-[800px] h-[700px] flex flex-col shadow-2xl overflow-hidden border border-blue-500/30">
+            <div class="p-6 flex justify-between items-center border-b border-white/5 bg-blue-500/10">
+                <h2 class="font-black text-2xl text-blue-400 tracking-tight flex items-center gap-3">🛠️ Accessory Builder</h2>
+                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-10 h-10 flex items-center justify-center rounded-full transition-all" onclick="window.closeAccessoryEditor()">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
             
-            <div class="w-full h-px bg-white/10 mb-8"></div>
-            
-            <div id="avatar-palette" class="flex flex-wrap gap-4 justify-center mb-10">
-                <!-- Populated by JS -->
+            <div class="flex-1 overflow-y-auto p-6 grid grid-cols-3 gap-6">
+                <!-- Left: Settings -->
+                <div class="col-span-1 flex flex-col gap-4 border-r border-white/10 pr-6">
+                    <div>
+                        <label class="text-xs text-gray-500 font-bold uppercase mb-1 block">Accessory Name</label>
+                        <input type="text" id="acc-name" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500 text-sm" placeholder="e.g. Cool Wings" maxlength="20">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 font-bold uppercase mb-1 block">Attachment Point</label>
+                        <select id="acc-attachment" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500 text-sm [&>option]:bg-gray-900">
+                            <option value="head">Head</option>
+                            <option value="torso">Torso</option>
+                            <option value="leftArm">Left Arm</option>
+                            <option value="rightArm">Right Arm</option>
+                            <option value="leftLeg">Left Leg</option>
+                            <option value="rightLeg">Right Leg</option>
+                        </select>
+                    </div>
+                    
+                    <button class="bg-blue-600 hover:bg-blue-500 w-full py-3 rounded-xl font-bold text-sm transition-transform hover:scale-[1.02] shadow-lg mt-auto" onclick="window.submitAccessory()">Submit to Store</button>
+                    <p class="text-[10px] text-gray-500 text-center">Submissions require admin approval.</p>
+                </div>
+                
+                <!-- Right: Parts Editor -->
+                <div class="col-span-2 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="text-xs text-gray-500 font-bold uppercase block">Parts</label>
+                        <button class="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors" onclick="window.addAccessoryPart()">+ Add Box</button>
+                    </div>
+                    
+                    <div id="acc-parts-container" class="flex-1 overflow-y-auto flex flex-col gap-4 pr-2">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
             </div>
-            <button class="w-full bg-white text-black hover:bg-gray-200 p-4 rounded-2xl font-bold text-lg transition-transform hover:scale-[1.02] shadow-xl" onclick="window.closeAvatarModal()">Save & Apply</button>
         </div>
     </div>
 
@@ -332,6 +406,7 @@
                 <button class="flex-1 py-4 font-bold text-sm hover:bg-white/5 transition-colors border-b-2 border-red-500 text-red-400" id="tab-admin-chat" onclick="window.switchAdminTab('chat')">Chat Logs</button>
                 <button class="flex-1 py-4 font-bold text-sm text-gray-400 hover:bg-white/5 transition-colors border-b-2 border-transparent" id="tab-admin-games" onclick="window.switchAdminTab('games')">Manage Games</button>
                 <button class="flex-1 py-4 font-bold text-sm text-gray-400 hover:bg-white/5 transition-colors border-b-2 border-transparent" id="tab-admin-users" onclick="window.switchAdminTab('users')">Manage Users</button>
+                <button class="flex-1 py-4 font-bold text-sm text-gray-400 hover:bg-white/5 transition-colors border-b-2 border-transparent" id="tab-admin-review" onclick="window.switchAdminTab('review')">Review Accessories</button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6" id="admin-content-chat">
@@ -349,6 +424,10 @@
                     <button class="bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl font-bold transition-colors" onclick="window.banAdminUser()">Ban</button>
                 </div>
             </div>
+
+            <div class="flex-1 overflow-y-auto p-6 hidden" id="admin-content-review">
+                <div class="grid grid-cols-1 gap-4" id="admin-review-list">Loading pending accessories...</div>
+            </div>
         </div>
     </div>
 
@@ -360,7 +439,7 @@
         
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, getDocs, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, getDocs, addDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- GLOBAL STATE ---
         let db, auth, currentUser = null;
@@ -389,9 +468,15 @@
         let equippedToolIndex = -1;
         let equippedToolMesh = null;
 
-        let myAvatarColors = JSON.parse(localStorage.getItem('weblox_avatar')) || { head: 0xf1c27d, torso: 0x1976D2, arms: 0xf1c27d, legs: 0x388E3C };
+        // Load Avatar Config
+        let myAvatarColors = JSON.parse(localStorage.getItem('weblox_avatar')) || { head: 0xf1c27d, torso: 0x1976D2, arms: 0xf1c27d, legs: 0x388E3C, accessories: [] };
+        if(!myAvatarColors.accessories) myAvatarColors.accessories = [];
+        
         let myUsername = localStorage.getItem('weblox_username') || "";
         window.currentAvatarPart = 'head';
+
+        // Accessory Draft Config
+        let draftingAccessory = { parts: [] };
 
         const UNIT_SIZE = 5;
         let objects = []; 
@@ -447,7 +532,29 @@
         }
 
         // --- UI LOGIC ---
-        window.showAvatarModal = () => document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
+        window.showNotification = function(msg) {
+            const notif = document.getElementById('notification');
+            if(!notif) return;
+            notif.innerText = msg;
+            notif.style.opacity = 1;
+            setTimeout(() => notif.style.opacity = 0, 3000);
+        };
+
+        window.updateLocalAvatar = () => {
+            if(myAvatarMesh) { scene.remove(myAvatarMesh); }
+            myAvatarMesh = createAvatarMesh(myAvatarColors);
+            myAvatarMesh.position.copy(playerObject.position);
+            myAvatarMesh.position.y -= 9; 
+            myAvatarMesh.rotation.y = cameraYaw;
+            myAvatarMesh.userData.head.visible = (activeCamera === thirdPersonCamera);
+            scene.add(myAvatarMesh);
+            localStorage.setItem('weblox_avatar', JSON.stringify(myAvatarColors));
+        };
+
+        window.showAvatarModal = () => {
+            document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
+            window.renderEquippedAccessories();
+        };
         
         window.closeAvatarModal = () => {
             const newName = document.getElementById('avatar-username').value.trim();
@@ -456,6 +563,7 @@
                 localStorage.setItem('weblox_username', myUsername);
                 document.getElementById('hub-username').innerText = myUsername;
             }
+            window.updateLocalAvatar();
             document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
         };
 
@@ -463,6 +571,168 @@
         window.closeHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('flex', 'hidden');
         window.showAuthModal = () => document.getElementById('auth-modal').classList.replace('hidden', 'flex');
         window.closeAuthModal = () => document.getElementById('auth-modal').classList.replace('flex', 'hidden');
+        window.showStoreModal = () => {
+            document.getElementById('store-modal').classList.replace('hidden', 'flex');
+            window.fetchStoreItems();
+        };
+        window.closeStoreModal = () => document.getElementById('store-modal').classList.replace('flex', 'hidden');
+
+        // --- ACCESSORY EDITOR LOGIC ---
+        window.openAccessoryEditor = () => {
+            draftingAccessory = { parts: [] };
+            document.getElementById('acc-name').value = '';
+            document.getElementById('acc-attachment').value = 'head';
+            window.renderAccParts();
+            document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+            document.getElementById('accessory-editor-modal').classList.replace('hidden', 'flex');
+        };
+        window.closeAccessoryEditor = () => {
+            document.getElementById('accessory-editor-modal').classList.replace('flex', 'hidden');
+            document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
+        };
+
+        window.addAccessoryPart = () => {
+            draftingAccessory.parts.push({px: 0, py: 0, pz: 0, sx: 1, sy: 1, sz: 1, colorHex: 0xffffff});
+            window.renderAccParts();
+        };
+
+        window.updateAccPart = (index, prop, value) => {
+            if(prop === 'colorHex') {
+                draftingAccessory.parts[index][prop] = parseInt(value.replace('#', ''), 16);
+            } else {
+                draftingAccessory.parts[index][prop] = parseFloat(value) || 0;
+            }
+        };
+
+        window.removeAccPart = (index) => {
+            draftingAccessory.parts.splice(index, 1);
+            window.renderAccParts();
+        };
+
+        window.renderAccParts = () => {
+            const container = document.getElementById('acc-parts-container');
+            container.innerHTML = draftingAccessory.parts.map((p, i) => `
+                <div class="bg-black/40 border border-white/10 p-3 rounded-xl relative">
+                    <button onclick="window.removeAccPart(${i})" class="absolute top-2 right-2 text-red-500 hover:text-white bg-white/5 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">X</button>
+                    <b class="text-sm block mb-2 text-blue-300">Part ${i+1}</b>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <label class="text-gray-400">X <input type="number" step="0.1" value="${p.px}" onchange="window.updateAccPart(${i},'px',this.value)" class="bg-white/10 text-white w-full rounded p-1"></label>
+                        <label class="text-gray-400">Y <input type="number" step="0.1" value="${p.py}" onchange="window.updateAccPart(${i},'py',this.value)" class="bg-white/10 text-white w-full rounded p-1"></label>
+                        <label class="text-gray-400">Z <input type="number" step="0.1" value="${p.pz}" onchange="window.updateAccPart(${i},'pz',this.value)" class="bg-white/10 text-white w-full rounded p-1"></label>
+                        <label class="text-gray-400">SX <input type="number" step="0.1" value="${p.sx}" onchange="window.updateAccPart(${i},'sx',this.value)" class="bg-white/10 text-white w-full rounded p-1"></label>
+                        <label class="text-gray-400">SY <input type="number" step="0.1" value="${p.sy}" onchange="window.updateAccPart(${i},'sy',this.value)" class="bg-white/10 text-white w-full rounded p-1"></label>
+                        <label class="text-gray-400">SZ <input type="number" step="0.1" value="${p.sz}" onchange="window.updateAccPart(${i},'sz',this.value)" class="bg-white/10 text-white w-full rounded p-1"></label>
+                        <label class="col-span-3 text-gray-400 mt-1 flex justify-between items-center">Color 
+                            <input type="color" value="${'#'+p.colorHex.toString(16).padStart(6,'0')}" onchange="window.updateAccPart(${i},'colorHex',this.value)" class="w-1/2 h-6 cursor-pointer">
+                        </label>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.submitAccessory = async () => {
+            const name = document.getElementById('acc-name').value.trim();
+            const att = document.getElementById('acc-attachment').value;
+            if(!name || draftingAccessory.parts.length === 0) {
+                window.showNotification("Must have a name and at least 1 part.");
+                return;
+            }
+            if(!currentUser || !db) return;
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'accessories'), {
+                    name: name,
+                    author: myUsername || "User",
+                    uid: currentUser.uid,
+                    attachment: att,
+                    parts: draftingAccessory.parts,
+                    status: 'pending',
+                    timestamp: Date.now()
+                });
+                window.showNotification("Accessory submitted for review!");
+                window.closeAccessoryEditor();
+            } catch(e) { 
+                console.error("Submit Error:", e);
+                window.showNotification("Firestore Rules block new collections. See prompt.");
+            }
+        };
+
+        // --- STORE LOGIC ---
+        const MOCK_ACCESSORY = {
+            id: 'mock-cap', name: 'Weblox Cap', author: 'System', attachment: 'head',
+            parts: [{px: 0, py: 1.2, pz: 0.2, sx: 2.2, sy: 0.5, sz: 2.5, colorHex: 0xFF0000}, {px: 0, py: 1.2, pz: -1.2, sx: 2.2, sy: 1.0, sz: 2.2, colorHex: 0xCC0000}],
+            status: 'approved'
+        };
+
+        window.fetchStoreItems = async () => {
+            const list = document.getElementById('store-items-list');
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'accessories'));
+                const items = [];
+                snap.forEach(d => { if(d.data().status === 'approved') items.push({id: d.id, ...d.data()}); });
+                
+                if (items.length === 0) items.push(MOCK_ACCESSORY); // Fallback for strict rules
+
+                list.innerHTML = items.map(item => {
+                    const isOwned = myAvatarColors.accessories.some(a => a.id === item.id);
+                    return `
+                        <div class="bg-black/40 p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-black text-lg text-white mb-1 truncate">${item.name}</h3>
+                                <p class="text-xs text-gray-400 mb-3">By ${item.author} | ${item.attachment}</p>
+                                <div class="text-[10px] text-gray-500 mb-4">${item.parts.length} part(s)</div>
+                            </div>
+                            ${isOwned ? 
+                                `<button class="w-full bg-white/10 text-gray-400 py-2 rounded-xl font-bold text-sm cursor-not-allowed">Owned</button>` :
+                                `<button class="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-xl font-bold text-sm transition-colors" onclick='window.equipAccessory(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Equip</button>`
+                            }
+                        </div>
+                    `;
+                }).join('');
+            } catch(e) { 
+                list.innerHTML = `
+                    <div class="col-span-3">
+                        <div class="text-red-400 text-center mb-4">Store connection restricted by strict backend rules. Showing fallback item.</div>
+                        <div class="bg-black/40 p-5 rounded-2xl border border-white/10 flex flex-col justify-between w-64 mx-auto">
+                            <div>
+                                <h3 class="font-black text-lg text-white mb-1">Weblox Cap</h3>
+                                <p class="text-xs text-gray-400 mb-3">By System | head</p>
+                            </div>
+                            <button class="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-xl font-bold text-sm transition-colors" onclick='window.equipAccessory(${JSON.stringify(MOCK_ACCESSORY).replace(/'/g, "&#39;")})'>Equip</button>
+                        </div>
+                    </div>`; 
+            }
+        };
+
+        window.equipAccessory = (accObj) => {
+            if(!myAvatarColors.accessories.some(a => a.id === accObj.id)) {
+                myAvatarColors.accessories.push(accObj);
+                window.updateLocalAvatar();
+                window.showNotification("Equipped " + accObj.name + "!");
+                window.fetchStoreItems(); // Refresh buttons
+            }
+        };
+
+        window.removeAccessory = (accId) => {
+            myAvatarColors.accessories = myAvatarColors.accessories.filter(a => a.id !== accId);
+            window.renderEquippedAccessories();
+            window.updateLocalAvatar();
+        };
+
+        window.renderEquippedAccessories = () => {
+            const list = document.getElementById('equipped-accessories-list');
+            if(myAvatarColors.accessories.length === 0) {
+                list.innerHTML = '<div class="text-xs text-gray-500 italic px-1">None equipped.</div>';
+                return;
+            }
+            list.innerHTML = myAvatarColors.accessories.map(acc => `
+                <div class="bg-white/5 p-2 rounded-lg border border-white/10 flex justify-between items-center text-sm">
+                    <span class="truncate pr-2">${acc.name}</span>
+                    <button class="text-red-400 hover:text-red-300 font-bold bg-white/5 px-2 py-1 rounded text-xs" onclick="window.removeAccessory('${acc.id}')">Remove</button>
+                </div>
+            `).join('');
+        };
+
 
         // --- ADMIN UI LOGIC ---
         window.showAdminPanel = () => {
@@ -472,7 +742,7 @@
         window.closeAdminPanel = () => document.getElementById('admin-panel').classList.replace('flex', 'hidden');
 
         window.switchAdminTab = (tab) => {
-            ['chat', 'games', 'users'].forEach(t => {
+            ['chat', 'games', 'users', 'review'].forEach(t => {
                 document.getElementById(`admin-content-${t}`).classList.add('hidden');
                 const btn = document.getElementById(`tab-admin-${t}`);
                 btn.classList.remove('border-red-500', 'text-red-400');
@@ -485,6 +755,7 @@
 
             if(tab === 'games') window.fetchAdminGames();
             if(tab === 'chat') window.fetchAdminChat();
+            if(tab === 'review') window.fetchAdminReviews();
         };
 
         window.fetchAdminChat = async () => {
@@ -518,6 +789,38 @@
                 `).join('');
                 if (games.length === 0) list.innerHTML = '<div class="text-gray-500 text-center mt-4">No games found.</div>';
             } catch(e) { list.innerHTML = `<div class="text-red-500">Error: ${e.message}</div>`; }
+        };
+
+        window.fetchAdminReviews = async () => {
+            const list = document.getElementById('admin-review-list');
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'accessories'));
+                const items = [];
+                snap.forEach(d => { if(d.data().status === 'pending') items.push({id: d.id, ...d.data()}); });
+                list.innerHTML = items.map(item => `
+                    <div class="bg-white/5 p-4 rounded-xl border border-white/10 flex justify-between items-center">
+                        <div><h3 class="font-bold text-white">${item.name}</h3><p class="text-xs text-gray-400">By ${item.author} | ${item.parts.length} parts</p></div>
+                        <div class="flex gap-2">
+                            <button onclick="window.approveAccessory('${item.id}')" class="bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white px-4 py-2 rounded font-bold transition-colors">Approve</button>
+                            <button onclick="window.rejectAccessory('${item.id}')" class="bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white px-4 py-2 rounded font-bold transition-colors">Reject</button>
+                        </div>
+                    </div>
+                `).join('');
+                if (items.length === 0) list.innerHTML = '<div class="text-gray-500 text-center mt-4">No pending accessories.</div>';
+            } catch(e) { list.innerHTML = `<div class="text-red-500">Firebase Rules block collection creation. Feature unavailable.</div>`; }
+        };
+
+        window.approveAccessory = async (id) => {
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'accessories', id), { status: 'approved' });
+                window.fetchAdminReviews();
+            } catch(e) { window.showNotification("Permission Denied: Check Rules"); }
+        };
+        window.rejectAccessory = async (id) => {
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'accessories', id));
+                window.fetchAdminReviews();
+            } catch(e) { window.showNotification("Permission Denied: Check Rules"); }
         };
 
         window.deleteChatMsg = async (id) => {
@@ -556,11 +859,10 @@
 
         window.setAvatarColor = (hex) => {
             myAvatarColors[window.currentAvatarPart] = hex;
-            localStorage.setItem('weblox_avatar', JSON.stringify(myAvatarColors));
             document.getElementById(`btn-part-${window.currentAvatarPart}`).style.backgroundColor = '#' + hex.toString(16).padStart(6, '0');
             const avatarPrev = document.getElementById('hub-avatar-preview');
             if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
-            if(myAvatarMesh) { myAvatarMesh.userData.mats[window.currentAvatarPart].color.setHex(hex); }
+            window.updateLocalAvatar();
         };
 
         function initAvatarUI() {
@@ -581,13 +883,6 @@
         }
         initAvatarUI();
 
-        window.showNotification = function(msg) {
-            const notif = document.getElementById('notification');
-            if(!notif) return;
-            notif.innerText = msg;
-            notif.style.opacity = 1;
-            setTimeout(() => notif.style.opacity = 0, 3000);
-        }
 
         window.updateInventoryHUD = function() {
             const hud = document.getElementById('inventory-hud');
@@ -814,7 +1109,8 @@
 
         // --- MULTIPLAYER AVATARS & FIREBASE ---
         function createAvatarMesh(colors) {
-            if(!colors) colors = { head: 0xf1c27d, torso: 0x1976D2, arms: 0xf1c27d, legs: 0x388E3C };
+            if(!colors) colors = { head: 0xf1c27d, torso: 0x1976D2, arms: 0xf1c27d, legs: 0x388E3C, accessories: [] };
+            if(!colors.accessories) colors.accessories = [];
             const group = new THREE.Group();
             
             const matHead = new THREE.MeshLambertMaterial({color: colors.head});
@@ -854,7 +1150,26 @@
             const kneeR = createLimb(matLegs, 0, -2, 0, 0.9, 2, 0.9);
             legR.pivot.add(kneeR.pivot); group.add(legR.pivot);
 
+            // Attach Custom Accessories
+            colors.accessories.forEach(acc => {
+                const accGroup = new THREE.Group();
+                acc.parts.forEach(p => {
+                    const mat = new THREE.MeshLambertMaterial({color: p.colorHex});
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.sx, p.sy, p.sz), mat);
+                    mesh.position.set(p.px, p.py, p.pz);
+                    mesh.castShadow = true;
+                    accGroup.add(mesh);
+                });
+                if(acc.attachment === 'head') head.add(accGroup);
+                else if(acc.attachment === 'torso') torso.add(accGroup);
+                else if(acc.attachment === 'leftArm') armL.mesh.add(accGroup);
+                else if(acc.attachment === 'rightArm') armR.mesh.add(accGroup);
+                else if(acc.attachment === 'leftLeg') legL.mesh.add(accGroup);
+                else if(acc.attachment === 'rightLeg') legR.mesh.add(accGroup);
+            });
+
             group.userData = { 
+                avatarStr: JSON.stringify(colors),
                 targetPos: new THREE.Vector3(), targetRot: 0, head: head,
                 limbs: [armL.pivot, armR.pivot, legL.pivot, legR.pivot], 
                 joints: [elbowL.pivot, elbowR.pivot, kneeL.pivot, kneeR.pivot],
@@ -871,533 +1186,6 @@
         myAvatarMesh.userData.head.visible = false; 
         scene.add(myAvatarMesh);
 
-        // -- INITIALIZE FIREBASE (Strict Compliance with Canvas Rules) --
-        const firebaseConfig = {
-            apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
-            authDomain: "weblox-1f8b0.firebaseapp.com",
-            projectId: "weblox-1f8b0",
-            storageBucket: "weblox-1f8b0.firebasestorage.app",
-            messagingSenderId: "765567900101",
-            appId: "1:765567900101:web:fa03494970c3019f1e93ac",
-            measurementId: "G-D7E2MT985J"
-        };
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-
-        // RULE 3 - Always call signIn FIRST and await it.
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch(e) { 
-                console.warn("Auth token mismatch. Falling back to anonymous login.", e); 
-                await signInAnonymously(auth).catch(err => console.error("Anon auth failed", err));
-            }
-        };
-        initAuth();
-
-        let authInitialized = false;
-        onAuthStateChanged(auth, (user) => { 
-            currentUser = user; 
-            if (!authInitialized) {
-                authInitialized = true;
-            }
-            if(user) {
-                window.closeAuthModal();
-                if (!myUsername) myUsername = "User_" + user.uid.substring(0, 6);
-                
-                const usernameEl = document.getElementById('hub-username');
-                if(usernameEl) usernameEl.innerText = myUsername;
-                const avatarUserEl = document.getElementById('avatar-username');
-                if(avatarUserEl) avatarUserEl.value = myUsername;
-                
-                const avatarPrev = document.getElementById('hub-avatar-preview');
-                if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
-                if (window.fetchCommunityGames) window.fetchCommunityGames();
-                initMultiplayer();
-                initChat();
-            } else {
-                window.showAuthModal();
-            }
-        });
-
-        // -- AUTH MODAL FUNCTIONS --
-        window.loginGuest = async () => { await signInAnonymously(auth); };
-        window.loginAccount = async () => {
-            const e = document.getElementById('auth-email').value;
-            const p = document.getElementById('auth-password').value;
-            if (e && p) await signInWithEmailAndPassword(auth, e, p).catch(err => window.showNotification("Login Failed: " + err.message));
-        };
-        window.registerAccount = async () => {
-            const e = document.getElementById('auth-email').value;
-            const p = document.getElementById('auth-password').value;
-            if (e && p) await createUserWithEmailAndPassword(auth, e, p).catch(err => window.showNotification("Registration Failed: " + err.message));
-        };
-
-        // --- GLOBAL CHAT SYNC (Rule 1 & 2 Compliant) ---
-        function initChat() {
-            if(!currentUser || !db) return;
-            if (chatUnsubscribe) chatUnsubscribe();
-            
-            // Note: Rule states: allow write to /global_chat/{roomId}
-            // By using addDoc to the collection directly, Firestore auto-generates 
-            // the {roomId} for each message document perfectly complying with the rule.
-            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'global_chat');
-            
-            chatUnsubscribe = onSnapshot(chatCol, (snapshot) => {
-                const msgs = [];
-                snapshot.forEach(docSnap => msgs.push({ id: docSnap.id, ...docSnap.data() }));
-                // No Complex Queries allowed in backend, sort in memory
-                msgs.sort((a, b) => a.timestamp - b.timestamp);
-
-                const chatHtml = msgs.slice(-50).map(m =>
-                    `<div class="chat-msg"><span class="chat-author" style="color: ${m.color || '#4fc3f7'}">${m.username || 'User_' + m.uid.substring(0,6)}:</span> ${m.text}</div>`
-                ).join('');
-
-                const hubChat = document.getElementById('hub-chat-messages');
-                if (hubChat) { hubChat.innerHTML = chatHtml; hubChat.scrollTop = hubChat.scrollHeight; }
-                const gameChat = document.getElementById('chat-messages');
-                if (gameChat) { gameChat.innerHTML = chatHtml; gameChat.scrollTop = gameChat.scrollHeight; }
-            }, (err) => console.error("Chat sync error", err));
-        }
-
-        window.sendHubChat = async function() {
-            const input = document.getElementById('hub-chat-input');
-            const text = input.value.trim();
-            if(!text || !currentUser || !db) return;
-            input.value = '';
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
-                    uid: currentUser.uid,
-                    username: myUsername,
-                    text: text,
-                    timestamp: Date.now(),
-                    color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
-                });
-            } catch(e) { console.error("Chat send error", e); }
-        };
-
-        function toggleChat(show) {
-            const container = document.getElementById('chat-input-container');
-            const input = document.getElementById('chat-input');
-            isChatting = show;
-            if (show) {
-                container.style.display = 'block';
-                if (isPointerLocked) unlockPointer();
-                setTimeout(() => input.focus(), 10);
-            } else {
-                container.style.display = 'none';
-                input.value = '';
-                if (!isPaused && isInGame && activeCamera === camera) lockPointer();
-            }
-        }
-
-        document.getElementById('chat-input').addEventListener('keydown', async (e) => {
-            if(e.key === 'Enter') {
-                const text = e.target.value.trim();
-                if(text && currentUser && db) {
-                    try {
-                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
-                            uid: currentUser.uid,
-                            username: myUsername,
-                            text: text,
-                            timestamp: Date.now(),
-                            color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
-                        });
-                    } catch(err) { console.error("Chat error", err); }
-                }
-                toggleChat(false);
-            }
-        });
-
-        // --- MULTIPLAYER PRESENCE & SYNC (Rule 1 & 2 Compliant) ---
-        window.joinRoom = function(roomId) {
-            currentRoomId = roomId;
-            for(let id in otherPlayers) {
-                scene.remove(otherPlayers[id]);
-                delete otherPlayers[id];
-            }
-            if (unsubscribeRoom) unsubscribeRoom();
-            if (!currentUser || !db) return;
-
-            try {
-                const roomCol = collection(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players');
-                unsubscribeRoom = onSnapshot(roomCol, (snapshot) => {
-                    snapshot.forEach(docSnap => {
-                        const data = docSnap.data();
-                        if (Date.now() - data.time > 10000 || docSnap.id === currentUser.uid) return;
-                        
-                        if (!otherPlayers[docSnap.id]) {
-                            const mesh = createAvatarMesh(data.avatar);
-                            scene.add(mesh);
-                            otherPlayers[docSnap.id] = mesh;
-                        }
-                        const player = otherPlayers[docSnap.id];
-                        if(data.avatar) {
-                            player.userData.mats.head.color.setHex(data.avatar.head);
-                            player.userData.mats.torso.color.setHex(data.avatar.torso);
-                            player.userData.mats.arms.color.setHex(data.avatar.arms);
-                            player.userData.mats.legs.color.setHex(data.avatar.legs);
-                        }
-                        player.userData.targetPos.set(data.x, data.y - 9, data.z); 
-                        player.userData.targetRot = data.ry;
-                        player.userData.isJumping = data.jumping || false;
-                        player.userData.lastUpdate = Date.now();
-
-                        if (data.bomb && data.bomb.id !== player.userData.lastBombId) {
-                            player.userData.lastBombId = data.bomb.id;
-                            if (typeof spawnBomb === 'function') {
-                                spawnBomb(
-                                    new THREE.Vector3(data.bomb.px, data.bomb.py, data.bomb.pz), 
-                                    new THREE.Vector3(data.bomb.vx, data.bomb.vy, data.bomb.vz)
-                                );
-                            }
-                        }
-                    });
-                }, (err) => console.warn("Multiplayer sync error", err));
-            } catch(e) {}
-        }
-
-        function initMultiplayer() {
-            if(!db || !currentUser) return;
-            window.joinRoom('hub');
-
-            // Presence Tracker for Global Friend List
-            try {
-                const presenceCol = collection(db, 'artifacts', appId, 'public', 'data', 'players');
-                onSnapshot(presenceCol, (snapshot) => {
-                    const friendsList = document.getElementById('friends-list');
-                    let friendsHTML = '';
-                    let onlineCount = 0;
-
-                    snapshot.forEach(docSnap => {
-                        const data = docSnap.data();
-                        if (Date.now() - data.time > 10000) return; // Ignore offline
-                        
-                        if (docSnap.id !== currentUser.uid) {
-                            onlineCount++;
-                            const headColor = data.avatar?.head ? data.avatar.head.toString(16).padStart(6,'0') : 'fff';
-                            const friendName = data.username || "User_" + docSnap.id.substring(0,6);
-                            const isPlaying = data.gameId && data.gameId !== 'hub';
-                            const locStr = isPlaying ? 'Playing Game' : 'In Hub';
-                            
-                            const joinAction = isPlaying ? `onclick="window.joinFriendGame('${data.gameId}')"` : `onclick="window.leaveGame()"`;
-                            const hoverState = isPlaying ? `hover:bg-blue-600/20 hover:border-blue-500/30 cursor-pointer` : `hover:bg-white/5 cursor-pointer`;
-                            const icon = isPlaying ? `<div class="text-xs bg-blue-600 border border-blue-400 text-white px-2.5 py-1 rounded-lg ml-auto shadow-lg group-hover:bg-blue-500 transition-colors font-bold">Join</div>` : ``;
-
-                            friendsHTML += `
-                                <div class="flex items-center gap-3 p-3 rounded-2xl transition-all group border border-transparent ${hoverState}" ${joinAction} title="${isPlaying ? 'Click to join game' : 'Return to Hub'}">
-                                    <div class="relative">
-                                        <div class="w-11 h-11 rounded-full border border-white/10 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform" style="background-color: #${headColor}"></div>
-                                        <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#0a0a0c] rounded-full flex items-center justify-center"><div class="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div></div>
-                                    </div>
-                                    <div class="overflow-hidden flex-1">
-                                        <div class="font-bold text-sm text-white truncate group-hover:text-blue-400 transition-colors">${friendName}</div>
-                                        <div class="text-xs text-gray-400 font-medium mt-0.5 truncate">${locStr}</div>
-                                    </div>
-                                    ${icon}
-                                </div>
-                            `;
-                        }
-                    });
-
-                    if (friendsList) {
-                        const badge = document.getElementById('online-count-badge');
-                        if(badge) badge.innerText = `${onlineCount} Online`;
-                        if (onlineCount === 0) {
-                            friendsList.innerHTML = `
-                                <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-                                    <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-2xl mb-4 shadow-inner">📴</div>
-                                    <h3 class="text-white font-bold mb-1">No friends online</h3>
-                                    <p class="text-xs text-gray-500 font-medium">When others join, they will appear here.</p>
-                                </div>`;
-                        } else {
-                            friendsList.innerHTML = friendsHTML;
-                        }
-                    }
-                }, (err) => console.warn("Presence sync error", err));
-            } catch(e) {}
-
-            // High Frequency Room Sync
-            setInterval(async () => {
-                if(!currentUser || !db) return;
-                const pos = playerObject.position;
-                if (pos.distanceTo(lastSyncPos) > 0.5 || Math.random() < 0.1) {
-                    lastSyncPos.copy(pos);
-                    try {
-                        const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
-                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent });
-                    } catch(e) {} 
-                }
-            }, 150);
-
-            // Low Frequency Global Presence Sync
-            setInterval(async () => {
-                if(!currentUser || !db) return;
-                try {
-                    const myPresRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
-                    await setDoc(myPresRef, { gameId: currentRoomId, time: Date.now(), avatar: myAvatarColors, username: myUsername });
-                } catch(e) {} 
-            }, 2000);
-
-            setInterval(() => {
-                const now = Date.now();
-                for(let id in otherPlayers) {
-                    if(now - otherPlayers[id].userData.lastUpdate > 5000) {
-                        scene.remove(otherPlayers[id]);
-                        delete otherPlayers[id];
-                    }
-                }
-            }, 2000);
-        }
-
-        // --- CONTROLS & INTERACTION ---
-        let isPointerLocked = false;
-        
-        function lockPointer() { if (!isPointerLocked && !isPaused) document.body.requestPointerLock(); }
-        function unlockPointer() { if (isPointerLocked) document.exitPointerLock(); }
-
-        document.addEventListener('pointerlockchange', () => {
-            isPointerLocked = (document.pointerLockElement === document.body);
-            if (!isPointerLocked) {
-                moveFwd = false; moveBwd = false; moveL = false; moveR = false;
-                if (isInGame && !isChatting && !isInteracting && !isPaused && document.getElementById('auth-modal').classList.contains('hidden')) { 
-                    window.openPauseMenu();
-                }
-            } else {
-                document.getElementById('interact-banner').classList.add('hidden');
-            }
-        });
-
-        window.enterInteractMode = function() {
-            isInteracting = true;
-            unlockPointer();
-            document.getElementById('interact-banner').classList.remove('hidden');
-        };
-        window.exitInteractMode = function() {
-            isInteracting = false;
-            document.getElementById('interact-banner').classList.add('hidden');
-            if (activeCamera === camera) lockPointer();
-        };
-
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2(0, 0);
-
-        document.addEventListener('mousedown', (e) => {
-            if (e.target.closest('#ui-layer') || e.target.closest('#script-modal') || e.target.closest('#publish-modal') || e.target.closest('#auth-modal') || e.target.closest('#pause-menu') || e.target.closest('#hub') || e.target.closest('#avatar-modal') || e.target.closest('#hub-chat-modal')) return;
-
-            if (e.button === 2) {
-                isRightMouseDown = true;
-                if (activeCamera === thirdPersonCamera && !isPaused) {
-                    lockPointer();
-                }
-            }
-
-            if (e.button === 0 && isInGame) { 
-                if (activeCamera === camera && !isPointerLocked && !isInteracting) {
-                    lockPointer(); 
-                    return;
-                }
-
-                if (activeCamera === camera) {
-                    mouse.x = 0; mouse.y = 0;
-                } else {
-                    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                }
-
-                raycaster.setFromCamera(mouse, activeCamera);
-                const intersects = raycaster.intersectObjects(objects, false);
-
-                if (!isRagdolled) {
-                    if (intersects.length > 0 && intersects[0].distance <= 40) {
-                        const obj = intersects[0].object;
-                        
-                        if (Object.values(BLOCK_TYPES).find(t => t.id === obj.userData.type)?.isTool && !obj.userData.isPickedUp) {
-                            obj.visible = false;
-                            obj.userData.isPickedUp = true;
-                            inventory.push(obj);
-                            window.updateInventoryHUD();
-                            window.showNotification("Equipped Tool!");
-                            playSound('place');
-                            return;
-                        }
-                        
-                        if (obj.userData.onClick) obj.userData.onClick();
-                    }
-                    
-                    if (equippedToolIndex >= 0 && inventory[equippedToolIndex]) {
-                        const tool = inventory[equippedToolIndex];
-                        if (tool.userData.onUse) tool.userData.onUse();
-                    } else if (equippedToolIndex === -1) {
-                        throwBomb();
-                    }
-                }
-            }
-        });
-
-        document.addEventListener('mouseup', (e) => {
-            if (e.button === 2) {
-                isRightMouseDown = false;
-                if (activeCamera === thirdPersonCamera && isPointerLocked) {
-                    unlockPointer(); 
-                }
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (isPointerLocked) {
-                if (activeCamera === camera || (activeCamera === thirdPersonCamera && isRightMouseDown)) {
-                    cameraYaw -= e.movementX * 0.003;
-                    cameraPitch -= e.movementY * 0.003;
-                    cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
-                }
-            } else if (isRightMouseDown && activeCamera === thirdPersonCamera) {
-                cameraYaw -= e.movementX * 0.003;
-                cameraPitch -= e.movementY * 0.003;
-                cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
-            }
-        });
-
-        document.addEventListener('contextmenu', e => e.preventDefault());
-
-        let moveFwd = false, moveBwd = false, moveL = false, moveR = false;
-        let canJump = false;
-        let isSprinting = false;
-        let isGrappling = false;
-        let grappleTarget = new THREE.Vector3();
-        
-        const velocity = new THREE.Vector3();
-        let prevTime = performance.now();
-
-        const isTyping = () => {
-            const active = document.activeElement;
-            return active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-        };
-
-        let secretAdminCode = "";
-        document.addEventListener('keydown', (e) => {
-            if (isTyping()) {
-                if(isChatting && e.code === 'Escape') toggleChat(false);
-                return;
-            }
-
-            // Secret Admin Trigger
-            secretAdminCode += e.key;
-            if (secretAdminCode.length > 8) secretAdminCode = secretAdminCode.slice(-8);
-            if (secretAdminCode === "07312012") {
-                window.showAdminPanel();
-                secretAdminCode = "";
-            }
-
-            if (isPaused) return;
-
-            if (e.code === 'KeyX' && isInGame) {
-                if (isPointerLocked) window.enterInteractMode();
-                else if (isInteracting) window.exitInteractMode();
-                return;
-            }
-
-            if (!isPointerLocked && activeCamera === camera && !isInteracting) return;
-
-            switch (e.code) {
-                case 'KeyW': moveFwd = true; break;
-                case 'KeyA': moveL = true; break;
-                case 'KeyS': moveBwd = true; break;
-                case 'KeyD': moveR = true; break;
-                case 'Digit1': if (!isRagdolled) window.equipTool(-1); break;
-                case 'Digit2': if (!isRagdolled) window.equipTool(0); break;
-                case 'Digit3': if (!isRagdolled) window.equipTool(1); break;
-                case 'Digit4': if (!isRagdolled) window.equipTool(2); break;
-                case 'Digit5': if (!isRagdolled) window.equipTool(3); break;
-                case 'Space': 
-                    if(canJump && !isRagdolled) { velocity.y = 150; canJump = false; playSound('jump'); }
-                    break;
-                case 'ShiftLeft': 
-                    isSprinting = true;
-                    break;
-                case 'KeyV': 
-                    if (activeCamera === camera) { 
-                        activeCamera = thirdPersonCamera; 
-                        myAvatarMesh.userData.head.visible = true; 
-                        if (isPointerLocked && !isRightMouseDown) unlockPointer(); 
-                    } 
-                    else { 
-                        activeCamera = camera; 
-                        myAvatarMesh.userData.head.visible = false; 
-                        if (!isPointerLocked && !isInteracting) lockPointer(); 
-                    }
-                    break;
-                case 'KeyE': 
-                    if (!isRagdolled && !isGrappling) {
-                        if (activeCamera === camera) { mouse.x = 0; mouse.y = 0; }
-                        raycaster.setFromCamera(mouse, activeCamera);
-                        const hits = raycaster.intersectObjects(objects, false);
-                        if (hits.length > 0 && hits[0].distance < 200) {
-                            isGrappling = true;
-                            grappleTarget.copy(hits[0].point);
-                            grappleLine.visible = true;
-                            velocity.y = Math.max(velocity.y, 50); 
-                            playSound('grapple');
-                        }
-                    }
-                    break;
-                case 'KeyT': case 'Slash': e.preventDefault(); if (isInGame) toggleChat(true); break;
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (isTyping()) return;
-            switch (e.code) {
-                case 'KeyW': moveFwd = false; break;
-                case 'KeyA': moveL = false; break;
-                case 'KeyS': moveBwd = false; break;
-                case 'KeyD': moveR = false; break;
-                case 'ShiftLeft': isSprinting = false; break;
-            }
-        });
-
-        const grappleMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-        const grappleGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-        const grappleLine = new THREE.Line(grappleGeo, grappleMat);
-        scene.add(grappleLine);
-        grappleLine.visible = false;
-
-        function spawnBomb(pos, vel) {
-            const bombGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            const bombMat = new THREE.MeshLambertMaterial({color: 0x111111});
-            const bomb = new THREE.Mesh(bombGeo, bombMat);
-            bomb.position.copy(pos);
-            bomb.userData.velocity = vel.clone(); 
-            bomb.userData.timer = 2.0; 
-            scene.add(bomb); activeBombs.push(bomb);
-        }
-
-        function throwBomb() {
-            playSound('jump');
-            const startPos = playerObject.position.clone();
-            const throwDir = new THREE.Vector3(0, 0, -1);
-            throwDir.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
-            const bVel = throwDir.multiplyScalar(150).add(velocity); 
-            
-            localBombEvent = {
-                id: Date.now() + Math.random(),
-                px: startPos.x, py: startPos.y, pz: startPos.z,
-                vx: bVel.x, vy: bVel.y, vz: bVel.z
-            };
-            
-            spawnBomb(startPos, bVel);
-            
-            // Immediate sync to reduce latency for other players
-            if (currentUser && db && currentRoomId !== 'hub') {
-                const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
-                setDoc(myRoomRef, { x: startPos.x, y: startPos.y, z: startPos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent }).catch(e=>console.warn(e));
-            }
-        }
 
         function triggerExplosion(pos) {
             playSound('boom');
@@ -1646,7 +1434,6 @@
                 const oldPos = p.position.clone();
                 p.position.lerp(p.userData.targetPos, 15 * delta);
                 
-                // Wrap rotation to take shortest path instead of spinning wildly
                 let diff = p.userData.targetRot - p.rotation.y;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
@@ -1822,7 +1609,152 @@
             cssRenderer.render(scene, activeCamera);
         }
 
-        // --- GAME PLAY & BROWSER ---
+        // --- FIREBASE SYNC & ROOM LOGIC ---
+        window.joinRoom = function(roomId) {
+            currentRoomId = roomId;
+            for(let id in otherPlayers) {
+                scene.remove(otherPlayers[id]);
+                delete otherPlayers[id];
+            }
+            if (unsubscribeRoom) unsubscribeRoom();
+            if (!currentUser || !db) return;
+
+            try {
+                const roomCol = collection(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players');
+                unsubscribeRoom = onSnapshot(roomCol, (snapshot) => {
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (Date.now() - data.time > 10000 || docSnap.id === currentUser.uid) return;
+                        
+                        const newAvatarStr = JSON.stringify(data.avatar || {});
+                        
+                        // Instantiate or Update Mesh based on Avatar String
+                        if (!otherPlayers[docSnap.id] || otherPlayers[docSnap.id].userData.avatarStr !== newAvatarStr) {
+                            if(otherPlayers[docSnap.id]) scene.remove(otherPlayers[docSnap.id]);
+                            
+                            const newMesh = createAvatarMesh(data.avatar);
+                            scene.add(newMesh);
+                            otherPlayers[docSnap.id] = newMesh;
+                            
+                            // Initialize new mesh position to prevent visual jump
+                            if(data.x !== undefined) newMesh.position.set(data.x, data.y - 9, data.z);
+                            if(data.ry !== undefined) newMesh.rotation.y = data.ry;
+                        }
+                        
+                        const player = otherPlayers[docSnap.id];
+                        player.userData.targetPos.set(data.x, data.y - 9, data.z); 
+                        player.userData.targetRot = data.ry;
+                        player.userData.isJumping = data.jumping || false;
+                        player.userData.lastUpdate = Date.now();
+
+                        if (data.bomb && data.bomb.id !== player.userData.lastBombId) {
+                            player.userData.lastBombId = data.bomb.id;
+                            if (typeof spawnBomb === 'function') {
+                                spawnBomb(
+                                    new THREE.Vector3(data.bomb.px, data.bomb.py, data.bomb.pz), 
+                                    new THREE.Vector3(data.bomb.vx, data.bomb.vy, data.bomb.vz)
+                                );
+                            }
+                        }
+                    });
+                }, (err) => console.warn("Multiplayer sync error", err));
+            } catch(e) {}
+        }
+
+        function initMultiplayer() {
+            if(!db || !currentUser) return;
+            window.joinRoom('hub');
+
+            // Presence Tracker for Global Friend List
+            try {
+                const presenceCol = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+                onSnapshot(presenceCol, (snapshot) => {
+                    const friendsList = document.getElementById('friends-list');
+                    let friendsHTML = '';
+                    let onlineCount = 0;
+
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (Date.now() - data.time > 10000) return; // Ignore offline
+                        
+                        if (docSnap.id !== currentUser.uid) {
+                            onlineCount++;
+                            const headColor = data.avatar?.head ? data.avatar.head.toString(16).padStart(6,'0') : 'fff';
+                            const friendName = data.username || "User_" + docSnap.id.substring(0,6);
+                            const isPlaying = data.gameId && data.gameId !== 'hub';
+                            const locStr = isPlaying ? 'Playing Game' : 'In Hub';
+                            
+                            const joinAction = isPlaying ? `onclick="window.joinFriendGame('${data.gameId}')"` : `onclick="window.leaveGame()"`;
+                            const hoverState = isPlaying ? `hover:bg-blue-600/20 hover:border-blue-500/30 cursor-pointer` : `hover:bg-white/5 cursor-pointer`;
+                            const icon = isPlaying ? `<div class="text-xs bg-blue-600 border border-blue-400 text-white px-2.5 py-1 rounded-lg ml-auto shadow-lg group-hover:bg-blue-500 transition-colors font-bold">Join</div>` : ``;
+
+                            friendsHTML += `
+                                <div class="flex items-center gap-3 p-3 rounded-2xl transition-all group border border-transparent ${hoverState}" ${joinAction} title="${isPlaying ? 'Click to join game' : 'Return to Hub'}">
+                                    <div class="relative">
+                                        <div class="w-11 h-11 rounded-full border border-white/10 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform" style="background-color: #${headColor}"></div>
+                                        <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#0a0a0c] rounded-full flex items-center justify-center"><div class="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div></div>
+                                    </div>
+                                    <div class="overflow-hidden flex-1">
+                                        <div class="font-bold text-sm text-white truncate group-hover:text-blue-400 transition-colors">${friendName}</div>
+                                        <div class="text-xs text-gray-400 font-medium mt-0.5 truncate">${locStr}</div>
+                                    </div>
+                                    ${icon}
+                                </div>
+                            `;
+                        }
+                    });
+
+                    if (friendsList) {
+                        const badge = document.getElementById('online-count-badge');
+                        if(badge) badge.innerText = `${onlineCount} Online`;
+                        if (onlineCount === 0) {
+                            friendsList.innerHTML = `
+                                <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                    <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-2xl mb-4 shadow-inner">📴</div>
+                                    <h3 class="text-white font-bold mb-1">No friends online</h3>
+                                    <p class="text-xs text-gray-500 font-medium">When others join, they will appear here.</p>
+                                </div>`;
+                        } else {
+                            friendsList.innerHTML = friendsHTML;
+                        }
+                    }
+                }, (err) => console.warn("Presence sync error", err));
+            } catch(e) {}
+
+            // High Frequency Room Sync
+            setInterval(async () => {
+                if(!currentUser || !db) return;
+                const pos = playerObject.position;
+                if (pos.distanceTo(lastSyncPos) > 0.5 || Math.random() < 0.1) {
+                    lastSyncPos.copy(pos);
+                    try {
+                        const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
+                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent });
+                    } catch(e) {} 
+                }
+            }, 150);
+
+            // Low Frequency Global Presence Sync
+            setInterval(async () => {
+                if(!currentUser || !db) return;
+                try {
+                    const myPresRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
+                    await setDoc(myPresRef, { gameId: currentRoomId, time: Date.now(), avatar: myAvatarColors, username: myUsername });
+                } catch(e) {} 
+            }, 2000);
+
+            setInterval(() => {
+                const now = Date.now();
+                for(let id in otherPlayers) {
+                    if(now - otherPlayers[id].userData.lastUpdate > 5000) {
+                        scene.remove(otherPlayers[id]);
+                        delete otherPlayers[id];
+                    }
+                }
+            }, 2000);
+        }
+
+        // --- GAME PLAY LOGIC ---
         window.joinFriendGame = async (gameId) => {
             if (!db || !currentUser) return;
             if (gameId === 'hub') {
@@ -1893,12 +1825,10 @@
             
             try {
                 const parsedData = JSON.parse(gameData.data);
-                // Robust check: Handle both Array format and Object format with .blocks property
                 const blocksArray = Array.isArray(parsedData) ? parsedData : parsedData.blocks;
                 
                 if (blocksArray) {
                     blocksArray.forEach(b => {
-                        // Resilient property reading in case the studio saves position/scale inside objects
                         const px = b.px !== undefined ? b.px : (b.position ? b.position.x : 0);
                         const py = b.py !== undefined ? b.py : (b.position ? b.position.y : 0);
                         const pz = b.pz !== undefined ? b.pz : (b.position ? b.position.z : 0);
