@@ -382,6 +382,7 @@
         let ragdollParts = [];
         const activeBombs = [];
         const explosions = [];
+        let localBombEvent = null;
 
         // Tool System
         let inventory = [];
@@ -1046,6 +1047,16 @@
                         player.userData.targetRot = data.ry;
                         player.userData.isJumping = data.jumping || false;
                         player.userData.lastUpdate = Date.now();
+
+                        if (data.bomb && data.bomb.id !== player.userData.lastBombId) {
+                            player.userData.lastBombId = data.bomb.id;
+                            if (typeof spawnBomb === 'function') {
+                                spawnBomb(
+                                    new THREE.Vector3(data.bomb.px, data.bomb.py, data.bomb.pz), 
+                                    new THREE.Vector3(data.bomb.vx, data.bomb.vy, data.bomb.vz)
+                                );
+                            }
+                        }
                     });
                 }, (err) => console.warn("Multiplayer sync error", err));
             } catch(e) {}
@@ -1119,7 +1130,7 @@
                     lastSyncPos.copy(pos);
                     try {
                         const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
-                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors });
+                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent });
                     } catch(e) {} 
                 }
             }, 150);
@@ -1356,19 +1367,36 @@
         scene.add(grappleLine);
         grappleLine.visible = false;
 
-        function throwBomb() {
-            playSound('jump');
+        function spawnBomb(pos, vel) {
             const bombGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
             const bombMat = new THREE.MeshLambertMaterial({color: 0x111111});
             const bomb = new THREE.Mesh(bombGeo, bombMat);
-            bomb.position.copy(playerObject.position);
-            
-            const throwDir = new THREE.Vector3(0, 0, -1);
-            throwDir.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
-            
-            bomb.userData.velocity = throwDir.multiplyScalar(150).add(velocity); 
+            bomb.position.copy(pos);
+            bomb.userData.velocity = vel.clone(); 
             bomb.userData.timer = 2.0; 
             scene.add(bomb); activeBombs.push(bomb);
+        }
+
+        function throwBomb() {
+            playSound('jump');
+            const startPos = playerObject.position.clone();
+            const throwDir = new THREE.Vector3(0, 0, -1);
+            throwDir.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
+            const bVel = throwDir.multiplyScalar(150).add(velocity); 
+            
+            localBombEvent = {
+                id: Date.now() + Math.random(),
+                px: startPos.x, py: startPos.y, pz: startPos.z,
+                vx: bVel.x, vy: bVel.y, vz: bVel.z
+            };
+            
+            spawnBomb(startPos, bVel);
+            
+            // Immediate sync to reduce latency for other players
+            if (currentUser && db && currentRoomId !== 'hub') {
+                const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
+                setDoc(myRoomRef, { x: startPos.x, y: startPos.y, z: startPos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent }).catch(e=>console.warn(e));
+            }
         }
 
         function triggerExplosion(pos) {
