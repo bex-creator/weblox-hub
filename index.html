@@ -193,9 +193,13 @@
     <!-- Avatar Modal -->
     <div id="avatar-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/80 z-[300] text-white pointer-events-auto backdrop-blur-xl">
         <div class="glass-panel p-10 rounded-3xl w-[540px] shadow-2xl transform scale-100 transition-transform">
-            <h2 class="text-3xl font-black text-white mb-2 tracking-tight">Avatar Editor</h2>
-            <p class="text-sm text-gray-400 mb-8 font-medium">Customize your character's body colors.</p>
+            <h2 class="text-3xl font-black text-white mb-2 tracking-tight">Profile & Avatar Editor</h2>
+            <p class="text-sm text-gray-400 mb-6 font-medium">Customize your username and character colors.</p>
             
+            <label class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block px-1">Username</label>
+            <input type="text" id="avatar-username" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 mb-6 text-white focus:outline-none focus:border-blue-500 transition-colors font-bold" placeholder="Enter username..." maxlength="16">
+
+            <label class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 block px-1">Body Colors</label>
             <div class="grid grid-cols-4 gap-4 mb-8">
                 <button id="btn-part-head" class="avatar-part-btn aspect-square rounded-2xl border-4 border-blue-500 transition-all hover:-translate-y-1 shadow-lg" onclick="window.selectAvatarPart('head')"><span class="sr-only">Head</span></button>
                 <button id="btn-part-torso" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('torso')"><span class="sr-only">Torso</span></button>
@@ -314,6 +318,40 @@
         </div>
     </div>
 
+    <!-- Admin Panel -->
+    <div id="admin-panel" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/90 z-[500] text-white pointer-events-auto backdrop-blur-xl">
+        <div class="glass-panel rounded-3xl w-[800px] h-[700px] flex flex-col shadow-2xl overflow-hidden border border-red-500/30">
+            <div class="p-6 flex justify-between items-center border-b border-white/5 bg-red-500/10">
+                <h2 class="font-black text-2xl text-red-400 tracking-tight flex items-center gap-3">🛡️ System Administration</h2>
+                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-10 h-10 flex items-center justify-center rounded-full transition-all" onclick="window.closeAdminPanel()">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="flex border-b border-white/5 bg-black/40">
+                <button class="flex-1 py-4 font-bold text-sm hover:bg-white/5 transition-colors border-b-2 border-red-500 text-red-400" id="tab-admin-chat" onclick="window.switchAdminTab('chat')">Chat Logs</button>
+                <button class="flex-1 py-4 font-bold text-sm text-gray-400 hover:bg-white/5 transition-colors border-b-2 border-transparent" id="tab-admin-games" onclick="window.switchAdminTab('games')">Manage Games</button>
+                <button class="flex-1 py-4 font-bold text-sm text-gray-400 hover:bg-white/5 transition-colors border-b-2 border-transparent" id="tab-admin-users" onclick="window.switchAdminTab('users')">Manage Users</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6" id="admin-content-chat">
+                <div class="flex flex-col gap-2" id="admin-chat-list">Loading logs...</div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 hidden" id="admin-content-games">
+                <div class="grid grid-cols-1 gap-4" id="admin-games-list">Loading games...</div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 hidden" id="admin-content-users">
+                <div class="text-gray-400 text-center py-10">
+                    <p class="mb-4">Ban User by Firebase UID</p>
+                    <input type="text" id="admin-ban-id" placeholder="Enter User ID..." class="bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-red-500 mr-2 w-64">
+                    <button class="bg-red-600 hover:bg-red-500 px-6 py-3 rounded-xl font-bold transition-colors" onclick="window.banAdminUser()">Ban</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ES Module Imports for Engine -->
     <script type="module">
         import * as THREE from 'three';
@@ -322,7 +360,7 @@
         
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, getDocs, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- GLOBAL STATE ---
         let db, auth, currentUser = null;
@@ -351,6 +389,7 @@
         let equippedToolMesh = null;
 
         let myAvatarColors = JSON.parse(localStorage.getItem('weblox_avatar')) || { head: 0xf1c27d, torso: 0x1976D2, arms: 0xf1c27d, legs: 0x388E3C };
+        let myUsername = localStorage.getItem('weblox_username') || "";
         window.currentAvatarPart = 'head';
 
         const UNIT_SIZE = 5;
@@ -408,11 +447,105 @@
 
         // --- UI LOGIC ---
         window.showAvatarModal = () => document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
-        window.closeAvatarModal = () => document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+        
+        window.closeAvatarModal = () => {
+            const newName = document.getElementById('avatar-username').value.trim();
+            if (newName) {
+                myUsername = newName;
+                localStorage.setItem('weblox_username', myUsername);
+                document.getElementById('hub-username').innerText = myUsername;
+            }
+            document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+        };
+
         window.showHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('hidden', 'flex');
         window.closeHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('flex', 'hidden');
         window.showAuthModal = () => document.getElementById('auth-modal').classList.replace('hidden', 'flex');
         window.closeAuthModal = () => document.getElementById('auth-modal').classList.replace('flex', 'hidden');
+
+        // --- ADMIN UI LOGIC ---
+        window.showAdminPanel = () => {
+            document.getElementById('admin-panel').classList.replace('hidden', 'flex');
+            window.switchAdminTab('chat');
+        };
+        window.closeAdminPanel = () => document.getElementById('admin-panel').classList.replace('flex', 'hidden');
+
+        window.switchAdminTab = (tab) => {
+            ['chat', 'games', 'users'].forEach(t => {
+                document.getElementById(`admin-content-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-admin-${t}`);
+                btn.classList.remove('border-red-500', 'text-red-400');
+                btn.classList.add('border-transparent', 'text-gray-400');
+            });
+            document.getElementById(`admin-content-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-admin-${tab}`);
+            activeBtn.classList.remove('border-transparent', 'text-gray-400');
+            activeBtn.classList.add('border-red-500', 'text-red-400');
+
+            if(tab === 'games') window.fetchAdminGames();
+            if(tab === 'chat') window.fetchAdminChat();
+        };
+
+        window.fetchAdminChat = async () => {
+            const list = document.getElementById('admin-chat-list');
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'));
+                const msgs = [];
+                snap.forEach(d => msgs.push({id: d.id, ...d.data()}));
+                msgs.sort((a,b) => b.timestamp - a.timestamp); // Newest first
+                list.innerHTML = msgs.map(m => `
+                    <div class="bg-white/5 p-3 rounded border border-white/10 flex justify-between items-center">
+                        <div class="truncate text-sm flex-1 mr-4"><span class="text-gray-500 text-xs mr-2">[${new Date(m.timestamp).toLocaleTimeString()}]</span> <b style="color:${m.color}">${m.uid.substring(0, 8)}...</b>: ${m.text}</div>
+                        <button onclick="window.deleteChatMsg('${m.id}')" class="text-red-500 hover:text-white text-xs font-bold px-2 py-1 bg-red-500/10 rounded">Delete</button>
+                    </div>
+                `).join('');
+                if (msgs.length === 0) list.innerHTML = '<div class="text-gray-500 text-center mt-4">No chat logs found.</div>';
+            } catch(e) { list.innerHTML = `<div class="text-red-500">Error: ${e.message}</div>`; }
+        };
+
+        window.fetchAdminGames = async () => {
+            const list = document.getElementById('admin-games-list');
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'games'));
+                const games = [];
+                snap.forEach(d => games.push({id: d.id, ...d.data()}));
+                list.innerHTML = games.map(g => `
+                    <div class="bg-white/5 p-4 rounded-xl border border-white/10 flex justify-between items-center">
+                        <div><h3 class="font-bold text-white">${g.name}</h3><p class="text-xs text-gray-400">By ${g.author} | ID: ${g.id}</p></div>
+                        <button onclick="window.deleteAdminGame('${g.id}')" class="bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white px-4 py-2 rounded font-bold transition-colors">Delete</button>
+                    </div>
+                `).join('');
+                if (games.length === 0) list.innerHTML = '<div class="text-gray-500 text-center mt-4">No games found.</div>';
+            } catch(e) { list.innerHTML = `<div class="text-red-500">Error: ${e.message}</div>`; }
+        };
+
+        window.deleteChatMsg = async (id) => {
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'global_chat', id));
+                window.showNotification("Message deleted.");
+                window.fetchAdminChat();
+            } catch(e) { window.showNotification("Permission Denied: Check Rules"); }
+        };
+
+        window.deleteAdminGame = async (gameId) => {
+            if(!confirm("Are you sure you want to permanently delete this game?")) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
+                window.showNotification("Game deleted.");
+                window.fetchAdminGames();
+                window.fetchCommunityGames(); // Refresh discover page
+            } catch(e) { window.showNotification("Permission Denied: Check Rules"); }
+        };
+
+        window.banAdminUser = async () => {
+            const uid = document.getElementById('admin-ban-id').value;
+            if(!uid) return;
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'banned_users', uid), { bannedAt: Date.now() });
+                window.showNotification("User successfully banned.");
+                document.getElementById('admin-ban-id').value = '';
+            } catch(e) { window.showNotification("Permission Denied: Check Rules"); }
+        };
 
         window.selectAvatarPart = (part) => {
             window.currentAvatarPart = part;
@@ -774,8 +907,13 @@
             }
             if(user) {
                 window.closeAuthModal();
+                if (!myUsername) myUsername = "User_" + user.uid.substring(0, 6);
+                
                 const usernameEl = document.getElementById('hub-username');
-                if(usernameEl) usernameEl.innerText = "User_" + user.uid.substring(0, 6);
+                if(usernameEl) usernameEl.innerText = myUsername;
+                const avatarUserEl = document.getElementById('avatar-username');
+                if(avatarUserEl) avatarUserEl.value = myUsername;
+                
                 const avatarPrev = document.getElementById('hub-avatar-preview');
                 if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
                 if (window.fetchCommunityGames) window.fetchCommunityGames();
@@ -834,6 +972,7 @@
             try {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
                     uid: currentUser.uid,
+                    username: myUsername,
                     text: text,
                     timestamp: Date.now(),
                     color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
@@ -863,6 +1002,7 @@
                     try {
                         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
                             uid: currentUser.uid,
+                            username: myUsername,
                             text: text,
                             timestamp: Date.now(),
                             color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
@@ -929,17 +1069,25 @@
                         if (docSnap.id !== currentUser.uid) {
                             onlineCount++;
                             const headColor = data.avatar?.head ? data.avatar.head.toString(16).padStart(6,'0') : 'fff';
-                            const locStr = data.gameId === 'hub' ? 'In Hub' : 'Playing Game';
+                            const friendName = data.username || "User_" + docSnap.id.substring(0,6);
+                            const isPlaying = data.gameId && data.gameId !== 'hub';
+                            const locStr = isPlaying ? 'Playing Game' : 'In Hub';
+                            
+                            const joinAction = isPlaying ? `onclick="window.joinFriendGame('${data.gameId}')"` : `onclick="window.leaveGame()"`;
+                            const hoverState = isPlaying ? `hover:bg-blue-600/20 hover:border-blue-500/30 cursor-pointer` : `hover:bg-white/5 cursor-pointer`;
+                            const icon = isPlaying ? `<div class="text-xs bg-blue-600 border border-blue-400 text-white px-2.5 py-1 rounded-lg ml-auto shadow-lg group-hover:bg-blue-500 transition-colors font-bold">Join</div>` : ``;
+
                             friendsHTML += `
-                                <div class="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer group border border-transparent hover:border-white/5">
+                                <div class="flex items-center gap-3 p-3 rounded-2xl transition-all group border border-transparent ${hoverState}" ${joinAction} title="${isPlaying ? 'Click to join game' : 'Return to Hub'}">
                                     <div class="relative">
-                                        <div class="w-12 h-12 rounded-full border border-white/10 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform" style="background-color: #${headColor}"></div>
-                                        <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#0a0a0c] rounded-full flex items-center justify-center"><div class="w-2.5 h-2.5 bg-emerald-400 rounded-full"></div></div>
+                                        <div class="w-11 h-11 rounded-full border border-white/10 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform" style="background-color: #${headColor}"></div>
+                                        <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#0a0a0c] rounded-full flex items-center justify-center"><div class="w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]"></div></div>
                                     </div>
                                     <div class="overflow-hidden flex-1">
-                                        <div class="font-bold text-sm text-white truncate group-hover:text-blue-400 transition-colors">User_${docSnap.id.substring(0,6)}</div>
+                                        <div class="font-bold text-sm text-white truncate group-hover:text-blue-400 transition-colors">${friendName}</div>
                                         <div class="text-xs text-gray-400 font-medium mt-0.5 truncate">${locStr}</div>
                                     </div>
+                                    ${icon}
                                 </div>
                             `;
                         }
@@ -980,7 +1128,7 @@
                 if(!currentUser || !db) return;
                 try {
                     const myPresRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
-                    await setDoc(myPresRef, { gameId: currentRoomId, time: Date.now(), avatar: myAvatarColors });
+                    await setDoc(myPresRef, { gameId: currentRoomId, time: Date.now(), avatar: myAvatarColors, username: myUsername });
                 } catch(e) {} 
             }, 2000);
 
@@ -1124,10 +1272,19 @@
             return active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
         };
 
+        let secretAdminCode = "";
         document.addEventListener('keydown', (e) => {
             if (isTyping()) {
                 if(isChatting && e.code === 'Escape') toggleChat(false);
                 return;
+            }
+
+            // Secret Admin Trigger
+            secretAdminCode += e.key;
+            if (secretAdminCode.length > 8) secretAdminCode = secretAdminCode.slice(-8);
+            if (secretAdminCode === "07312012") {
+                window.showAdminPanel();
+                secretAdminCode = "";
             }
 
             if (isPaused) return;
@@ -1624,6 +1781,27 @@
         }
 
         // --- GAME PLAY & BROWSER ---
+        window.joinFriendGame = async (gameId) => {
+            if (!db || !currentUser) return;
+            if (gameId === 'hub') {
+                window.leaveGame();
+                return;
+            }
+            try {
+                window.showNotification("Joining friend's game...");
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    window.playGame(docSnap.id, docSnap.data());
+                } else {
+                    window.showNotification("Game no longer exists.");
+                }
+            } catch (e) {
+                console.error("Join friend error:", e);
+                window.showNotification("Failed to join game.");
+            }
+        };
+
         window.fetchCommunityGames = async () => {
             const list = document.getElementById('community-games-list'); 
             if(!currentUser || !db) {
