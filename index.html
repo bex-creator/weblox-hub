@@ -14,7 +14,8 @@
         }
     </script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #111214; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #111214; font-family: 'Inter', sans-serif; user-select: none; color: #ededed; }
         
         #css-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
         #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
@@ -182,7 +183,88 @@
                 </div>
             </aside>
         </div>
+    </div> <!-- END of hub -->
+
+    <!-- Avatar Modal -->
+    <div id="avatar-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/80 z-[300] text-white pointer-events-auto backdrop-blur-xl">
+        <div class="glass-panel p-10 rounded-3xl w-[540px] shadow-2xl transform scale-100 transition-transform">
+            <h2 class="text-3xl font-black text-white mb-2 tracking-tight">Avatar Editor</h2>
+            <p class="text-sm text-gray-400 mb-8 font-medium">Customize your character's body colors.</p>
+            
+            <div class="grid grid-cols-4 gap-4 mb-8">
+                <button id="btn-part-head" class="avatar-part-btn aspect-square rounded-2xl border-4 border-blue-500 transition-all hover:-translate-y-1 shadow-lg" onclick="selectAvatarPart('head')"><span class="sr-only">Head</span></button>
+                <button id="btn-part-torso" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="selectAvatarPart('torso')"><span class="sr-only">Torso</span></button>
+                <button id="btn-part-arms" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="selectAvatarPart('arms')"><span class="sr-only">Arms</span></button>
+                <button id="btn-part-legs" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="selectAvatarPart('legs')"><span class="sr-only">Legs</span></button>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500 font-bold uppercase tracking-wider mb-4 px-2">
+                <span>Head</span><span>Torso</span><span>Arms</span><span>Legs</span>
+            </div>
+            
+            <div class="w-full h-px bg-white/10 mb-8"></div>
+            
+            <div id="avatar-palette" class="flex flex-wrap gap-4 justify-center mb-10">
+                <!-- Populated by JS -->
+            </div>
+            <button class="w-full bg-white text-black hover:bg-gray-200 p-4 rounded-2xl font-bold text-lg transition-transform hover:scale-[1.02] shadow-xl" onclick="closeAvatarModal()">Save & Apply</button>
+        </div>
     </div>
+
+    <!-- Hub Chat Modal -->
+    <div id="hub-chat-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/80 z-[300] text-white pointer-events-auto backdrop-blur-xl">
+        <div class="glass-panel rounded-3xl w-[600px] h-[650px] flex flex-col shadow-2xl overflow-hidden border border-white/10">
+            <div class="p-6 flex justify-between items-center border-b border-white/5 bg-white/5">
+                <h2 class="font-black text-2xl text-white tracking-tight flex items-center gap-3">Global Chat</h2>
+                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-10 h-10 flex items-center justify-center rounded-full transition-all" onclick="closeHubChatModal()">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="hub-chat-messages" class="flex-1 overflow-y-auto p-6 flex flex-col gap-4 text-sm font-medium">
+                <!-- Mirrored from game chat -->
+            </div>
+            <div class="p-6 bg-black/40 border-t border-white/5 flex gap-3">
+                <input id="hub-chat-input" type="text" class="flex-1 bg-white/10 border border-white/10 text-white px-5 py-4 rounded-2xl focus:outline-none focus:border-blue-500 focus:bg-white/15 transition-all font-medium placeholder-gray-500" placeholder="Say hello..." onkeydown="if(event.key === 'Enter') window.sendHubChat()">
+                <button class="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded-2xl font-bold transition-transform hover:scale-[1.02] shadow-lg shadow-blue-600/20" onclick="window.sendHubChat()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game HUD -->
+    <div id="game-hud">
+        <div id="topbar">
+            <div class="glass-panel px-6 py-4 rounded-2xl border border-white/10">
+                <h1 id="current-game-title" class="text-3xl font-black text-white tracking-tight drop-shadow-lg">Game Title</h1>
+                <p id="current-game-author" class="text-sm text-gray-300 font-semibold mt-1">By Creator</p>
+            </div>
+            <button class="glass-panel hover:bg-white/10 text-white px-5 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-3 shadow-lg group" onclick="window.openPauseMenu()">
+                <div class="bg-white/20 px-2 py-1 rounded text-xs group-hover:bg-white text-black transition-colors">ESC</div> Menu
+            </button>
+        </div>
+
+        <div id="crosshair"></div>
+        <div id="notification">Notification</div>
+        
+        <div id="interact-banner" class="hidden absolute top-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-2xl border border-blue-400/50 cursor-pointer hover:bg-blue-500 pointer-events-auto transition-transform hover:scale-105 flex items-center gap-3 backdrop-blur-md" onclick="window.exitInteractMode()">
+            <span class="text-xl">🖱️</span> INTERACT MODE ACTIVE - Click to Return (or press X)
+        </div>
+
+        <div id="chat-wrapper">
+            <div id="chat-messages"></div>
+            <div id="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type to chat..." autocomplete="off" maxlength="100">
+            </div>
+        </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu">
+        <h1 class="text-6xl font-black mb-12 text-white tracking-tighter drop-shadow-2xl">PAUSED</h1>
+        
+        <div class="flex flex-col gap-4 w-72 mb-16">
+            <button class="bg-white text-black hover:bg-gray-200 py-4 rounded-2xl font-black text-lg transition-transform hover:scale-105 shadow-xl shadow-white/10" onclick="window.resumeGame()">Resume Game</button>
+            <button class="glass-panel text-white hover:bg-white/10 py-4 rounded-2xl font-bold text-lg transition-transform hover:scale-105 shadow-lg" onclick="window.leaveGame()">Leave Game</button>
+        </div>
+
         <div class="glass-panel p-8 rounded-3xl text-sm text-left grid grid-cols-2 gap-x-16 gap-y-4 shadow-2xl text-gray-300 font-medium">
             <div class="col-span-2 text-center text-white font-black border-b border-white/10 pb-4 mb-2 tracking-widest text-xs uppercase opacity-70">Controls</div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">W A S D</b> <span>Move</span></div>
@@ -227,11 +309,11 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // --- GLOBAL STATE ---
         let db, auth, currentUser = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-weblox-id';
         const DEFAULT_TV_HTML = "<style>body{margin:0;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;background:#111;color:#4fc3f7;font-family:sans-serif;}</style><div><h1 style='text-align:center; font-size:50px;'>HTML TV</h1><p style='text-align:center; color:#ccc; font-size:24px; margin-bottom: 20px;'>Press <b>X</b> to unlock your mouse, then click here to type:</p><input type='text' style='padding:15px; font-size:24px; width:80%; border-radius:8px; border:2px solid #4fc3f7; background:#222; color:#fff;' placeholder='Type something...' /></div>";
 
-        // Multiplayer state
         const otherPlayers = {}; 
         let lastSyncPos = new THREE.Vector3();
         let isChatting = false;
@@ -239,103 +321,19 @@
         let isPaused = false;
         let isInGame = false;
         
-        // Physics & Explosions state
         let isRagdolled = false;
         let ragdollTimer = 0;
         let ragdollParts = [];
         const activeBombs = [];
         const explosions = [];
 
-        // Avatar state
         let myAvatarColors = JSON.parse(localStorage.getItem('weblox_avatar')) || { head: 0xf1c27d, torso: 0x1976D2, arms: 0xf1c27d, legs: 0x388E3C };
         window.currentAvatarPart = 'head';
 
-        try {
-            const firebaseConfig = {
-                apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
-                authDomain: "weblox-1f8b0.firebaseapp.com",
-                projectId: "weblox-1f8b0",
-                storageBucket: "weblox-1f8b0.firebasestorage.app",
-                messagingSenderId: "765567900101",
-                appId: "1:765567900101:web:fa03494970c3019f1e93ac",
-                measurementId: "G-D7E2MT985J"
-            };
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-
-            const initAuth = async () => {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    }
-                } catch(e) { 
-                    console.error("Auth error, falling back to anonymous", e); 
-                    await signInAnonymously(auth);
-                }
-            };
-            initAuth();
-
-            let authInitialized = false;
-            onAuthStateChanged(auth, (user) => { 
-                currentUser = user; 
-                if (!authInitialized) {
-                    authInitialized = true;
-                    // If no session exists, prompt them to log in or pick guest
-                    if (!user && !(typeof __initial_auth_token !== 'undefined' && __initial_auth_token)) {
-                        window.showAuthModal();
-                    }
-                }
-                if(user) {
-                    document.getElementById('hub-username').innerText = "User_" + user.uid.substring(0, 6);
-                    document.getElementById('hub-avatar-preview').style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
-                    if (window.fetchCommunityGames) window.fetchCommunityGames();
-                    initMultiplayer();
-                    initChat();
-                }
-            });
-        } catch(e) { console.error("Firebase init failed:", e); }
-
-        // --- AUTH FUNCTIONS ---
-        window.showAuthModal = () => { document.getElementById('auth-modal').classList.replace('hidden', 'flex'); };
-        window.closeAuthModal = () => document.getElementById('auth-modal').classList.replace('flex', 'hidden');
-        
-        window.registerAccount = async () => {
-            const email = document.getElementById('auth-email').value.trim();
-            const pass = document.getElementById('auth-password').value;
-            if(!email || !pass) return window.showNotification("Please enter email and password");
-            try {
-                await createUserWithEmailAndPassword(auth, email, pass);
-                window.closeAuthModal();
-                window.showNotification("Account created successfully!");
-            } catch(e) { window.showNotification(e.message); }
-        };
-
-        window.loginAccount = async () => {
-            const email = document.getElementById('auth-email').value.trim();
-            const pass = document.getElementById('auth-password').value;
-            if(!email || !pass) return window.showNotification("Please enter email and password");
-            try {
-                await signInWithEmailAndPassword(auth, email, pass);
-                window.closeAuthModal();
-                window.showNotification("Signed in successfully!");
-            } catch(e) { window.showNotification(e.message); }
-        };
-
-        window.loginGuest = async () => {
-            try {
-                await signInAnonymously(auth);
-                window.closeAuthModal();
-                window.showNotification("Playing as Guest");
-            } catch(e) { window.showNotification(e.message); }
-        };
-
-        // --- ENGINE CONSTANTS & STATE ---
         const UNIT_SIZE = 5;
         let objects = []; 
         let spawnPoints = [];
 
-        // Engine Object Types (Only used for rendering, creation is done in Studio)
         const BLOCK_TYPES = {
             NORMAL: { id: 'Normal', shape: 'box' },
             GLASS: { id: 'Glass', shape: 'box', matParams: { transparent: true, opacity: 0.4 } },
@@ -348,77 +346,14 @@
             TV: { id: 'TV', shape: 'box', colorOverride: 0x222222 }
         };
 
-        // --- HUB & UI LOGIC ---
-        function initAvatarUI() {
-            const paletteDiv = document.getElementById('avatar-palette');
-            const extendedPalette = [0xf1c27d, 0x1976D2, 0x388E3C, 0xDE3131, 0xFBC02D, 0x8E24AA, 0xF57C00, 0xFFFFFF, 0x555555, 0x222222, 0x000000, 0x8B4513, 0xFF69B4];
-            extendedPalette.forEach(hex => {
-                const btn = document.createElement('div');
-                btn.className = "w-12 h-12 rounded-full cursor-pointer border-2 border-gray-600 hover:border-white hover:scale-110 transition-all shadow-md";
-                btn.style.backgroundColor = '#' + hex.toString(16).padStart(6, '0');
-                btn.onclick = () => window.setAvatarColor(hex);
-                paletteDiv.appendChild(btn);
-            });
-            Object.keys(myAvatarColors).forEach(part => {
-                const btn = document.getElementById(`btn-part-${part}`);
-                if(btn) btn.style.backgroundColor = '#' + myAvatarColors[part].toString(16).padStart(6, '0');
-            });
-        }
-        initAvatarUI();
-
-        window.showNotification = function(msg) {
-            const notif = document.getElementById('notification');
-            notif.innerText = msg;
-            notif.classList.add('show');
-            setTimeout(() => notif.classList.remove('show'), 3000);
-        }
-
-        // --- INTERACT MODE (TVs) ---
-        window.enterInteractMode = function() {
-            isInteracting = true;
-            controls.unlock();
-            document.getElementById('interact-banner').classList.remove('hidden');
-        };
-        window.exitInteractMode = function() {
-            isInteracting = false;
-            document.getElementById('interact-banner').classList.add('hidden');
-            controls.lock();
-        };
-
-        // --- PAUSE MENU LOGIC ---
-        window.openPauseMenu = function() {
-            isPaused = true;
-            controls.unlock();
-            document.getElementById('pause-menu').style.display = 'flex';
-        };
-
-        window.resumeGame = function() {
-            isPaused = false;
-            document.getElementById('pause-menu').style.display = 'none';
-            controls.lock();
-        };
-
-        window.leaveGame = function() {
-            isPaused = false;
-            isInGame = false;
-            document.getElementById('pause-menu').style.display = 'none';
-            document.getElementById('game-hud').style.display = 'none';
-            document.getElementById('hub').style.display = 'flex';
-            window.clearLevel(false);
-            window.fetchCommunityGames(); // Refresh list on return
-        };
-
-
-        // --- THREE.JS SETUP & GEOMETRIES ---
+        // --- THREE.JS SETUP ---
         const scene = new THREE.Scene();
         
-        // CSS3D Renderer Setup
         const cssRenderer = new CSS3DRenderer();
         cssRenderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('css-container').appendChild(cssRenderer.domElement);
         const cssScene = new THREE.Scene();
 
-        // WebGL Renderer Setup (Transparent overlay)
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setClearColor(0x000000, 0); 
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -430,7 +365,6 @@
         const thirdPersonCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         let activeCamera = camera;
         
-        // --- CONTROLS INITIALIZATION ---
         const controls = new PointerLockControls(camera, document.body);
         controls.getObject().position.set(0, 9, 0); 
         scene.add(controls.getObject());
@@ -439,11 +373,8 @@
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(100, 200, 50);
         dirLight.castShadow = true;
-        dirLight.shadow.camera.left = -200; dirLight.shadow.camera.right = 200;
-        dirLight.shadow.camera.top = 200; dirLight.shadow.camera.bottom = -200;
         scene.add(dirLight);
 
-        // Skybox
         const skyGeo = new THREE.BoxGeometry(900, 900, 900);
         const skyMat = new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide, fog: false });
         const skyBox = new THREE.Mesh(skyGeo, skyMat);
@@ -462,7 +393,6 @@
         }
         createBaseplate();
 
-        // Standard Geometries
         const blockGeo = new THREE.BoxGeometry(UNIT_SIZE, UNIT_SIZE, UNIT_SIZE);
         const cylinderGeo = new THREE.CylinderGeometry(UNIT_SIZE/2, UNIT_SIZE/2, UNIT_SIZE, 16);
         
@@ -474,86 +404,6 @@
         const rampGeo = new THREE.ExtrudeGeometry(rampShape, { depth: UNIT_SIZE, bevelEnabled: false });
         rampGeo.center();
 
-        function destroyBlock(obj) {
-            if(obj.userData.cssDiv && obj.userData.cssDiv.parentNode) {
-                obj.userData.cssDiv.parentNode.removeChild(obj.userData.cssDiv);
-            }
-            scene.remove(obj);
-            const idx = objects.indexOf(obj);
-            if(idx > -1) objects.splice(idx, 1);
-            if(obj.userData.type === 'Spawn') {
-                const spIdx = spawnPoints.indexOf(obj);
-                if(spIdx > -1) spawnPoints.splice(spIdx, 1);
-            }
-        }
-
-        function instantiateBlock(position, typeId, colorHex, scriptCode = "", scale = 1) {
-            const typeDef = Object.values(BLOCK_TYPES).find(t => t.id === typeId) || BLOCK_TYPES.NORMAL;
-            const finalColor = typeDef.colorOverride !== null ? typeDef.colorOverride : colorHex;
-            
-            let geo = blockGeo;
-            if (typeDef.shape === 'ramp') geo = rampGeo;
-            if (typeDef.shape === 'cylinder') geo = cylinderGeo;
-
-            const matParams = { color: finalColor, ...typeDef.matParams };
-            if(typeId === 'Spawn') { matParams.transparent = true; matParams.opacity = 0.0; } // Spawns are invisible in client
-            else if (typeId === 'Lava') { matParams.emissive = new THREE.Color(0x880000); }
-            else if (typeDef.isNeon) { matParams.emissive = new THREE.Color(finalColor); matParams.emissiveIntensity = 0.8; }
-            
-            const material = new THREE.MeshLambertMaterial(matParams);
-            const mesh = new THREE.Mesh(geo, material);
-            mesh.position.copy(position);
-            mesh.castShadow = true; mesh.receiveShadow = true;
-
-            mesh.scale.set(scale, scale, scale);
-
-            mesh.userData = { type: typeId, colorHex: colorHex, script: scriptCode, scale: scale };
-
-            // Only add outlines to non-spawn blocks
-            if (typeId !== 'Spawn') {
-                const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.3, transparent: true });
-                mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgesMat));
-            }
-
-            if (typeId === 'TV') {
-                const res = 800; 
-                const iframe = document.createElement('iframe');
-                iframe.style.width = res + 'px';
-                iframe.style.height = res + 'px';
-                iframe.style.border = 'none';
-                iframe.style.backgroundColor = '#000';
-                iframe.style.boxSizing = 'border-box';
-                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
-                iframe.srcdoc = scriptCode || DEFAULT_TV_HTML;
-                
-                const cssObject = new CSS3DObject(iframe);
-                cssObject.scale.set(UNIT_SIZE/res, UNIT_SIZE/res, UNIT_SIZE/res);
-                cssObject.position.set(0, 0, UNIT_SIZE/2 + 0.02); 
-                
-                const holeGeo = new THREE.PlaneGeometry(UNIT_SIZE, UNIT_SIZE);
-                const holeMat = new THREE.MeshBasicMaterial({ 
-                    blending: THREE.CustomBlending,
-                    blendEquation: THREE.AddEquation,
-                    blendSrc: THREE.ZeroFactor,
-                    blendDst: THREE.ZeroFactor,
-                    side: THREE.DoubleSide,
-                    depthWrite: true
-                }); 
-                const holeMesh = new THREE.Mesh(holeGeo, holeMat);
-                holeMesh.position.set(0, 0, UNIT_SIZE/2 + 0.02);
-                
-                mesh.add(cssObject);
-                mesh.add(holeMesh);
-                mesh.userData.cssDiv = iframe;
-            }
-
-            scene.add(mesh);
-            objects.push(mesh);
-            if(typeId === 'Spawn') spawnPoints.push(mesh);
-            return mesh;
-        }
-
-        // --- MULTIPLAYER AVATARS & ARTICULATED RIGS ---
         function createAvatarMesh(colors) {
             if(!colors) colors = { head: 0xf1c27d, torso: 0x1976D2, arms: 0xf1c27d, legs: 0x388E3C };
             const group = new THREE.Group();
@@ -612,75 +462,308 @@
         myAvatarMesh.userData.head.visible = false; 
         scene.add(myAvatarMesh);
 
+        window.showNotification = function(msg) {
+            const notif = document.getElementById('notification');
+            if(!notif) return;
+            notif.innerText = msg;
+            notif.style.opacity = 1;
+            setTimeout(() => notif.style.opacity = 0, 3000);
+        }
+
+        // --- FIREBASE SETUP ---
+        try {
+            const firebaseConfig = {
+                apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
+                authDomain: "weblox-1f8b0.firebaseapp.com",
+                projectId: "weblox-1f8b0",
+                storageBucket: "weblox-1f8b0.firebasestorage.app",
+                messagingSenderId: "765567900101",
+                appId: "1:765567900101:web:fa03494970c3019f1e93ac",
+                measurementId: "G-D7E2MT985J"
+            };
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            const initAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    }
+                } catch(e) { 
+                    console.warn("Auth token mismatch (expected with custom Firebase config). Showing login modal."); 
+                }
+            };
+            initAuth();
+
+            let authInitialized = false;
+            onAuthStateChanged(auth, (user) => { 
+                currentUser = user; 
+                if (!authInitialized) {
+                    authInitialized = true;
+                    // If no session exists, prompt them to log in or pick guest
+                    if (!user && !(typeof __initial_auth_token !== 'undefined' && __initial_auth_token)) {
+                        window.showAuthModal();
+                    }
+                }
+                if(user) {
+                    const usernameEl = document.getElementById('hub-username');
+                    if(usernameEl) usernameEl.innerText = "User_" + user.uid.substring(0, 6);
+                    const avatarPrev = document.getElementById('hub-avatar-preview');
+                    if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
+                    if (window.fetchCommunityGames) window.fetchCommunityGames();
+                    initMultiplayer();
+                    initChat();
+                }
+            });
+        } catch(e) { console.error("Firebase init failed:", e); }
+
+        // --- AUTH FUNCTIONS ---
+        window.showAuthModal = () => { document.getElementById('auth-modal').classList.replace('hidden', 'flex'); };
+        window.closeAuthModal = () => document.getElementById('auth-modal').classList.replace('flex', 'hidden');
+        
+        window.registerAccount = async () => {
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-password').value;
+            if(!email || !pass) return window.showNotification("Please enter email and password");
+            try {
+                await createUserWithEmailAndPassword(auth, email, pass);
+                window.closeAuthModal();
+                window.showNotification("Account created successfully!");
+            } catch(e) { window.showNotification(e.message); }
+        };
+
+        window.loginAccount = async () => {
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-password').value;
+            if(!email || !pass) return window.showNotification("Please enter email and password");
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                window.closeAuthModal();
+                window.showNotification("Signed in successfully!");
+            } catch(e) { window.showNotification(e.message); }
+        };
+
+        window.loginGuest = async () => {
+            try {
+                await signInAnonymously(auth);
+                window.closeAuthModal();
+                window.showNotification("Playing as Guest");
+            } catch(e) { window.showNotification(e.message); }
+        };
+
+        // --- HUB & UI LOGIC ---
+        function initAvatarUI() {
+            const paletteDiv = document.getElementById('avatar-palette');
+            if(!paletteDiv) return;
+            const extendedPalette = [0xf1c27d, 0x1976D2, 0x388E3C, 0xDE3131, 0xFBC02D, 0x8E24AA, 0xF57C00, 0xFFFFFF, 0x555555, 0x222222, 0x000000, 0x8B4513, 0xFF69B4];
+            extendedPalette.forEach(hex => {
+                const btn = document.createElement('div');
+                btn.className = "w-12 h-12 rounded-full cursor-pointer border-2 border-gray-600 hover:border-white hover:scale-110 transition-all shadow-md";
+                btn.style.backgroundColor = '#' + hex.toString(16).padStart(6, '0');
+                btn.onclick = () => window.setAvatarColor(hex);
+                paletteDiv.appendChild(btn);
+            });
+            Object.keys(myAvatarColors).forEach(part => {
+                const btn = document.getElementById(`btn-part-${part}`);
+                if(btn) btn.style.backgroundColor = '#' + myAvatarColors[part].toString(16).padStart(6, '0');
+            });
+        }
+        initAvatarUI();
+        
+        window.showAvatarModal = () => { document.getElementById('avatar-modal').classList.replace('hidden', 'flex'); };
+        window.closeAvatarModal = () => document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+        window.selectAvatarPart = (part) => { window.currentAvatarPart = part; document.querySelectorAll('.avatar-part-btn').forEach(b => b.classList.replace('border-blue-500', 'border-transparent')); document.getElementById(`btn-part-${part}`).classList.replace('border-transparent', 'border-blue-500'); };
+        window.setAvatarColor = (hex) => { myAvatarColors[window.currentAvatarPart] = hex; document.getElementById(`btn-part-${window.currentAvatarPart}`).style.backgroundColor = '#' + hex.toString(16).padStart(6, '0'); localStorage.setItem('weblox_avatar', JSON.stringify(myAvatarColors)); if (myAvatarMesh) { myAvatarMesh.userData.mats[window.currentAvatarPart].color.setHex(hex); } const hubPreview = document.getElementById('hub-avatar-preview'); if(hubPreview) hubPreview.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0'); };
+
+        // --- INTERACT MODE (TVs) ---
+        window.enterInteractMode = function() {
+            isInteracting = true;
+            controls.unlock();
+            document.getElementById('interact-banner').classList.remove('hidden');
+        };
+        window.exitInteractMode = function() {
+            isInteracting = false;
+            document.getElementById('interact-banner').classList.add('hidden');
+            controls.lock();
+        };
+
+        // --- PAUSE MENU LOGIC ---
+        window.openPauseMenu = function() {
+            isPaused = true;
+            controls.unlock();
+            document.getElementById('pause-menu').style.display = 'flex';
+        };
+
+        window.resumeGame = function() {
+            isPaused = false;
+            document.getElementById('pause-menu').style.display = 'none';
+            controls.lock();
+        };
+
+        window.leaveGame = function() {
+            isPaused = false;
+            isInGame = false;
+            document.getElementById('pause-menu').style.display = 'none';
+            document.getElementById('game-hud').style.display = 'none';
+            document.getElementById('hub').style.display = 'flex';
+            window.clearLevel(false);
+            window.fetchCommunityGames();
+        };
+
+        function destroyBlock(obj) {
+            if(obj.userData.cssDiv && obj.userData.cssDiv.parentNode) {
+                obj.userData.cssDiv.parentNode.removeChild(obj.userData.cssDiv);
+            }
+            scene.remove(obj);
+            const idx = objects.indexOf(obj);
+            if(idx > -1) objects.splice(idx, 1);
+            if(obj.userData.type === 'Spawn') {
+                const spIdx = spawnPoints.indexOf(obj);
+                if(spIdx > -1) spawnPoints.splice(spIdx, 1);
+            }
+        }
+
+        function instantiateBlock(position, typeId, colorHex, scriptCode = "", scale = 1) {
+            const typeDef = Object.values(BLOCK_TYPES).find(t => t.id === typeId) || BLOCK_TYPES.NORMAL;
+            const finalColor = typeDef.colorOverride !== null ? typeDef.colorOverride : colorHex;
+            
+            let geo = blockGeo;
+            if (typeDef.shape === 'ramp') geo = rampGeo;
+            if (typeDef.shape === 'cylinder') geo = cylinderGeo;
+
+            const matParams = { color: finalColor, ...typeDef.matParams };
+            if(typeId === 'Spawn') { matParams.transparent = true; matParams.opacity = 0.0; } 
+            else if (typeId === 'Lava') { matParams.emissive = new THREE.Color(0x880000); }
+            else if (typeDef.isNeon) { matParams.emissive = new THREE.Color(finalColor); matParams.emissiveIntensity = 0.8; }
+            
+            const material = new THREE.MeshLambertMaterial(matParams);
+            const mesh = new THREE.Mesh(geo, material);
+            mesh.position.copy(position);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+
+            mesh.scale.set(scale, scale, scale);
+
+            mesh.userData = { type: typeId, colorHex: colorHex, script: scriptCode, scale: scale };
+
+            if (typeId !== 'Spawn') {
+                const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.3, transparent: true });
+                mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgesMat));
+            }
+
+            if (typeId === 'TV') {
+                const res = 800; 
+                const iframe = document.createElement('iframe');
+                iframe.style.width = res + 'px';
+                iframe.style.height = res + 'px';
+                iframe.style.border = 'none';
+                iframe.style.backgroundColor = '#000';
+                iframe.style.boxSizing = 'border-box';
+                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+                iframe.srcdoc = scriptCode || DEFAULT_TV_HTML;
+                
+                const cssObject = new CSS3DObject(iframe);
+                cssObject.scale.set(UNIT_SIZE/res, UNIT_SIZE/res, UNIT_SIZE/res);
+                cssObject.position.set(0, 0, UNIT_SIZE/2 + 0.02); 
+                
+                const holeGeo = new THREE.PlaneGeometry(UNIT_SIZE, UNIT_SIZE);
+                const holeMat = new THREE.MeshBasicMaterial({ 
+                    blending: THREE.CustomBlending,
+                    blendEquation: THREE.AddEquation,
+                    blendSrc: THREE.ZeroFactor,
+                    blendDst: THREE.ZeroFactor,
+                    side: THREE.DoubleSide,
+                    depthWrite: true
+                }); 
+                const holeMesh = new THREE.Mesh(holeGeo, holeMat);
+                holeMesh.position.set(0, 0, UNIT_SIZE/2 + 0.02);
+                
+                mesh.add(cssObject);
+                mesh.add(holeMesh);
+                mesh.userData.cssDiv = iframe;
+            }
+
+            scene.add(mesh);
+            objects.push(mesh);
+            if(typeId === 'Spawn') spawnPoints.push(mesh);
+            return mesh;
+        }
+
         function initMultiplayer() {
             if(!db || !currentUser) return;
             const playersCol = collection(db, 'artifacts', appId, 'public', 'data', 'players');
-            onSnapshot(playersCol, (snapshot) => {
-                const friendsList = document.getElementById('friends-list');
-                let friendsHTML = '';
-                let onlineCount = 0;
+            try {
+                onSnapshot(playersCol, (snapshot) => {
+                    const friendsList = document.getElementById('friends-list');
+                    let friendsHTML = '';
+                    let onlineCount = 0;
 
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if (Date.now() - data.time > 10000) return; // Ignore offline
-                    
-                    if (docSnap.id !== currentUser.uid) {
-                        // --- 3D Engine Update ---
-                        if (!otherPlayers[docSnap.id]) {
-                            const mesh = createAvatarMesh(data.avatar);
-                            scene.add(mesh);
-                            otherPlayers[docSnap.id] = mesh;
-                        }
-                        const player = otherPlayers[docSnap.id];
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (Date.now() - data.time > 10000) return; // Ignore offline
                         
-                        if(data.avatar) {
-                            player.userData.mats.head.color.setHex(data.avatar.head);
-                            player.userData.mats.torso.color.setHex(data.avatar.torso);
-                            player.userData.mats.arms.color.setHex(data.avatar.arms);
-                            player.userData.mats.legs.color.setHex(data.avatar.legs);
+                        if (docSnap.id !== currentUser.uid) {
+                            if (!otherPlayers[docSnap.id]) {
+                                const mesh = createAvatarMesh(data.avatar);
+                                scene.add(mesh);
+                                otherPlayers[docSnap.id] = mesh;
+                            }
+                            const player = otherPlayers[docSnap.id];
+                            
+                            if(data.avatar) {
+                                player.userData.mats.head.color.setHex(data.avatar.head);
+                                player.userData.mats.torso.color.setHex(data.avatar.torso);
+                                player.userData.mats.arms.color.setHex(data.avatar.arms);
+                                player.userData.mats.legs.color.setHex(data.avatar.legs);
+                            }
+                            player.userData.targetPos.set(data.x, data.y - 9, data.z); 
+                            player.userData.targetRot = data.ry;
+                            player.userData.lastUpdate = Date.now();
+                            
+                            onlineCount++;
+                            const headColor = data.avatar?.head ? data.avatar.head.toString(16).padStart(6,'0') : 'fff';
+                            friendsHTML += `
+                                <div class="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer group border border-transparent hover:border-white/5">
+                                    <div class="relative">
+                                        <div class="w-12 h-12 rounded-full border border-white/10 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform" style="background-color: #${headColor}"></div>
+                                        <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#0a0a0c] rounded-full flex items-center justify-center"><div class="w-2.5 h-2.5 bg-emerald-400 rounded-full"></div></div>
+                                    </div>
+                                    <div class="overflow-hidden flex-1">
+                                        <div class="font-bold text-sm text-white truncate group-hover:text-blue-400 transition-colors">User_${docSnap.id.substring(0,6)}</div>
+                                        <div class="text-xs text-gray-400 font-medium mt-0.5 truncate">Playing Weblox</div>
+                                    </div>
+                                    <button class="ml-auto opacity-0 group-hover:opacity-100 bg-white/10 hover:bg-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-sm" onclick="window.showNotification('Joining friend...')">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                    </button>
+                                </div>
+                            `;
                         }
-                        player.userData.targetPos.set(data.x, data.y - 9, data.z); 
-                        player.userData.targetRot = data.ry;
-                        player.userData.lastUpdate = Date.now();
-                        
-                        // --- Friends UI Update ---
-                        onlineCount++;
-                        const headColor = data.avatar?.head ? data.avatar.head.toString(16).padStart(6,'0') : 'fff';
-                        friendsHTML += `
-                            <div class="flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer group border border-transparent hover:border-white/5">
-                                <div class="relative">
-                                    <div class="w-12 h-12 rounded-full border border-white/10 flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform" style="background-color: #${headColor}"></div>
-                                    <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#0a0a0c] rounded-full flex items-center justify-center"><div class="w-2.5 h-2.5 bg-emerald-400 rounded-full"></div></div>
-                                </div>
-                                <div class="overflow-hidden flex-1">
-                                    <div class="font-bold text-sm text-white truncate group-hover:text-blue-400 transition-colors">User_${docSnap.id.substring(0,6)}</div>
-                                    <div class="text-xs text-gray-400 font-medium mt-0.5 truncate">Playing Weblox</div>
-                                </div>
-                                <button class="ml-auto opacity-0 group-hover:opacity-100 bg-white/10 hover:bg-white/20 text-white w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-sm" onclick="window.showNotification('Joining friend...')">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-                                </button>
-                            </div>
-                        `;
+                    });
+
+                    if (friendsList) {
+                        const badge = document.getElementById('online-count-badge');
+                        if(badge) badge.innerText = `${onlineCount} Online`;
+                        if (onlineCount === 0) {
+                            friendsList.innerHTML = `
+                                <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
+                                    <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-2xl mb-4 shadow-inner">📴</div>
+                                    <h3 class="text-white font-bold mb-1">No friends online</h3>
+                                    <p class="text-xs text-gray-500 font-medium">When others join, they will appear here.</p>
+                                </div>`;
+                        } else {
+                            friendsList.innerHTML = friendsHTML;
+                        }
+                    }
+                }, (error) => {
+                    console.error("Multiplayer sync error", error);
+                    if (error.code === 'permission-denied') {
+                        window.showNotification("Firestore rules blocking multiplayer sync. Please update your Rules in the Firebase console.");
                     }
                 });
-
-                if (friendsList) {
-                    document.getElementById('online-count-badge').innerText = `${onlineCount} Online`;
-                    if (onlineCount === 0) {
-                        friendsList.innerHTML = `
-                            <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-                                <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-2xl mb-4 shadow-inner">📴</div>
-                                <h3 class="text-white font-bold mb-1">No friends online</h3>
-                                <p class="text-xs text-gray-500 font-medium">When others join, they will appear here.</p>
-                            </div>`;
-                    } else {
-                        friendsList.innerHTML = friendsHTML;
-                    }
-                }
-            }, (error) => console.error("Multiplayer sync error", error));
+            } catch(e) {}
 
             setInterval(async () => {
-                if(!currentUser || !controls.isLocked) return;
+                if(!currentUser || typeof controls === 'undefined' || !controls.isLocked) return;
                 const pos = controls.getObject().position;
                 if (pos.distanceTo(lastSyncPos) > 0.5 || Math.random() < 0.1) {
                     lastSyncPos.copy(pos);
@@ -709,24 +792,26 @@
         function initChat() {
             if(!db || !currentUser) return;
             const chatRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_chat', 'main_room');
-            onSnapshot(chatRef, (docSnap) => {
-                const msgsContainer = document.getElementById('chat-messages');
-                if(docSnap.exists()) {
-                    const data = docSnap.data();
-                    if(data.messages) {
-                        msgsContainer.innerHTML = `<div class="chat-msg chat-sys">Welcome to Weblox!</div><div class="chat-msg chat-sys">Press 'T' to talk to other players.</div>`;
-                        data.messages.forEach(m => {
-                            const div = document.createElement('div');
-                            div.className = 'chat-msg';
-                            div.innerHTML = `<span class="chat-author">${m.author}:</span> ${escapeHTML(m.text)}`;
-                            msgsContainer.appendChild(div);
-                        });
-                        msgsContainer.scrollTop = msgsContainer.scrollHeight;
-                        const hubChat = document.getElementById('hub-chat-messages');
-                        if (hubChat) { hubChat.innerHTML = msgsContainer.innerHTML; hubChat.scrollTop = hubChat.scrollHeight; }
+            try {
+                onSnapshot(chatRef, (docSnap) => {
+                    const msgsContainer = document.getElementById('chat-messages');
+                    if(docSnap.exists()) {
+                        const data = docSnap.data();
+                        if(data.messages) {
+                            msgsContainer.innerHTML = `<div class="chat-msg chat-sys">Welcome to Weblox!</div><div class="chat-msg chat-sys">Press 'T' to talk to other players.</div>`;
+                            data.messages.forEach(m => {
+                                const div = document.createElement('div');
+                                div.className = 'chat-msg';
+                                div.innerHTML = `<span class="chat-author">${m.author}:</span> ${escapeHTML(m.text)}`;
+                                msgsContainer.appendChild(div);
+                            });
+                            msgsContainer.scrollTop = msgsContainer.scrollHeight;
+                            const hubChat = document.getElementById('hub-chat-messages');
+                            if (hubChat) { hubChat.innerHTML = msgsContainer.innerHTML; hubChat.scrollTop = hubChat.scrollHeight; }
+                        }
                     }
-                }
-            }, (err) => console.error(err));
+                }, (err) => console.error(err));
+            } catch (e) {}
         }
 
         async function sendChat() {
@@ -745,6 +830,10 @@
             } catch(e) { console.error("Chat send failed", e); }
         }
 
+        window.showHubChatModal = () => { document.getElementById('hub-chat-modal').classList.replace('hidden', 'flex'); setTimeout(() => document.getElementById('hub-chat-input').focus(), 100); };
+        window.closeHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('flex', 'hidden');
+        window.sendHubChat = async () => { const input = document.getElementById('hub-chat-input'); const text = input.value.trim(); if(!text || !db || !currentUser) return; input.value = ''; const chatRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_chat', 'main_room'); const author = "User_" + currentUser.uid.substring(0,6); try { const docSnap = await getDoc(chatRef); let messages = docSnap.exists() ? (docSnap.data().messages || []) : []; messages.push({ author, text, time: Date.now() }); if(messages.length > 50) messages = messages.slice(messages.length - 50); await setDoc(chatRef, { messages }, { merge: true }); } catch(e) { console.error("Hub Chat send failed", e); } };
+
         function toggleChat(forceState) {
             isChatting = forceState !== undefined ? forceState : !isChatting;
             const inputContainer = document.getElementById('chat-input-container');
@@ -757,15 +846,14 @@
 
         // --- CONTROLS & PHYSICS ---
         controls.addEventListener('lock', () => { 
-            if(isPaused) return; // Ignore lock attempts if pause menu is open manually
+            if(isPaused) return; 
             isInteracting = false;
             document.getElementById('interact-banner').classList.add('hidden');
         });
         
         controls.addEventListener('unlock', () => { 
             moveFwd = false; moveBwd = false; moveL = false; moveR = false;
-            // If the user presses Escape, unlock fires. If we are in game and not interacting/chatting, open pause menu.
-            if(isInGame && !isChatting && !isInteracting && !isPaused) { 
+            if(isInGame && !isChatting && !isInteracting && !isPaused && document.getElementById('auth-modal').classList.contains('hidden')) { 
                 window.openPauseMenu();
             } 
         });
@@ -923,7 +1011,7 @@
         window.clearLevel = function clearLevel(notify = true) {
             const toRemove = objects.filter(o => o !== baseplate);
             toRemove.forEach(o => destroyBlock(o));
-            if(notify) showNotification("Workspace Cleared");
+            if(notify) window.showNotification("Workspace Cleared");
         }
 
         // --- GAME LOOP ---
@@ -936,7 +1024,7 @@
             get playerVelocity() { return velocity; },
             bounce: (force) => { velocity.y = force; canJump = false; },
             explode: (pos) => triggerExplosion(pos),
-            notify: (msg) => showNotification(msg),
+            notify: (msg) => window.showNotification(msg),
             spawn: (x,y,z, type='Normal', color=0xFFFFFF, scale=1) => instantiateBlock(new THREE.Vector3(x,y,z), type, color, "", scale),
             destroy: (b) => destroyBlock(b)
         };
@@ -1166,22 +1254,22 @@
                             isInGame = true;
                             respawnPlayer();
                             setTimeout(() => { if (controls) controls.lock(); }, 100);
-                            showNotification(`Joined ${game.name}`);
-                        } catch(err) { showNotification("Error loading game"); }
+                            window.showNotification(`Joined ${game.name}`);
+                        } catch(err) { window.showNotification("Error loading game"); }
                     };
                     list.appendChild(btn);
                 });
             } catch(e) { console.error("Fetch error", e); }
         };
 
-        window.showAvatarModal = () => document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
-        window.closeAvatarModal = () => document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
-        window.selectAvatarPart = (part) => { window.currentAvatarPart = part; document.querySelectorAll('.avatar-part-btn').forEach(b => b.classList.replace('border-blue-500', 'border-transparent')); document.getElementById(`btn-part-${part}`).classList.replace('border-transparent', 'border-blue-500'); };
-        window.setAvatarColor = (hex) => { myAvatarColors[window.currentAvatarPart] = hex; document.getElementById(`btn-part-${window.currentAvatarPart}`).style.backgroundColor = '#' + hex.toString(16).padStart(6, '0'); localStorage.setItem('weblox_avatar', JSON.stringify(myAvatarColors)); if (myAvatarMesh) { myAvatarMesh.userData.mats[window.currentAvatarPart].color.setHex(hex); } document.getElementById('hub-avatar-preview').style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0'); };
-        window.showHubChatModal = () => { document.getElementById('hub-chat-modal').classList.replace('hidden', 'flex'); setTimeout(() => document.getElementById('hub-chat-input').focus(), 100); };
-        window.closeHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('flex', 'hidden');
-        window.sendHubChat = async () => { const input = document.getElementById('hub-chat-input'); const text = input.value.trim(); if(!text || !db || !currentUser) return; input.value = ''; const chatRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_chat', 'main_room'); const author = "User_" + currentUser.uid.substring(0,6); try { const docSnap = await getDoc(chatRef); let messages = docSnap.exists() ? (docSnap.data().messages || []) : []; messages.push({ author, text, time: Date.now() }); if(messages.length > 50) messages = messages.slice(messages.length - 50); await setDoc(chatRef, { messages }, { merge: true }); } catch(e) { console.error("Hub Chat send failed", e); } };
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            thirdPersonCamera.aspect = window.innerWidth / window.innerHeight; thirdPersonCamera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
+        animate();
     </script>
 </body>
 </html>
