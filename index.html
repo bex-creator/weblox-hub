@@ -1272,6 +1272,19 @@
         };
 
         window.showAvatarModal = () => { document.getElementById('avatar-modal').classList.replace('hidden', 'flex'); };
+        window.closeAvatarModal = () => document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+        window.selectAvatarPart = (part) => { window.currentAvatarPart = part; document.querySelectorAll('.avatar-part-btn').forEach(b => b.classList.replace('border-blue-500', 'border-transparent')); document.getElementById(`btn-part-${part}`).classList.replace('border-transparent', 'border-blue-500'); };
+        window.setAvatarColor = (hex) => { myAvatarColors[window.currentAvatarPart] = hex; document.getElementById(`btn-part-${window.currentAvatarPart}`).style.backgroundColor = '#' + hex.toString(16).padStart(6, '0'); localStorage.setItem('weblox_avatar', JSON.stringify(myAvatarColors)); if (myAvatarMesh) { myAvatarMesh.userData.mats[window.currentAvatarPart].color.setHex(hex); } const hubPreview = document.getElementById('hub-avatar-preview'); if(hubPreview) hubPreview.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0'); };
+
+        window.showHubChatModal = () => { document.getElementById('hub-chat-modal').classList.replace('hidden', 'flex'); setTimeout(() => document.getElementById('hub-chat-input').focus(), 100); };
+        window.closeHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('flex', 'hidden');
+        window.sendHubChat = async () => { const input = document.getElementById('hub-chat-input'); const text = input.value.trim(); if(!text || !db || !currentUser) return; input.value = ''; const chatRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_chat', 'main_room'); const author = "User_" + currentUser.uid.substring(0,6); try { const docSnap = await getDoc(chatRef); let messages = docSnap.exists() ? (docSnap.data().messages || []) : []; messages.push({ author, text, time: Date.now() }); if(messages.length > 50) messages = messages.slice(messages.length - 50); await setDoc(chatRef, { messages }, { merge: true }); } catch(e) { console.error("Hub Chat send failed", e); } };
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            thirdPersonCamera.aspect = window.innerWidth / window.innerHeight; thirdPersonCamera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            cssRenderer.setSize(window.innerWidth, window.innerHeight);
         });
 
         animate();
