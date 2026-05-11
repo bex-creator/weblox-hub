@@ -197,10 +197,10 @@
             <p class="text-sm text-gray-400 mb-8 font-medium">Customize your character's body colors.</p>
             
             <div class="grid grid-cols-4 gap-4 mb-8">
-                <button id="btn-part-head" class="avatar-part-btn aspect-square rounded-2xl border-4 border-blue-500 transition-all hover:-translate-y-1 shadow-lg" onclick="selectAvatarPart('head')"><span class="sr-only">Head</span></button>
-                <button id="btn-part-torso" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="selectAvatarPart('torso')"><span class="sr-only">Torso</span></button>
-                <button id="btn-part-arms" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="selectAvatarPart('arms')"><span class="sr-only">Arms</span></button>
-                <button id="btn-part-legs" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="selectAvatarPart('legs')"><span class="sr-only">Legs</span></button>
+                <button id="btn-part-head" class="avatar-part-btn aspect-square rounded-2xl border-4 border-blue-500 transition-all hover:-translate-y-1 shadow-lg" onclick="window.selectAvatarPart('head')"><span class="sr-only">Head</span></button>
+                <button id="btn-part-torso" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('torso')"><span class="sr-only">Torso</span></button>
+                <button id="btn-part-arms" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('arms')"><span class="sr-only">Arms</span></button>
+                <button id="btn-part-legs" class="avatar-part-btn aspect-square rounded-2xl border-4 border-transparent hover:border-white/20 transition-all hover:-translate-y-1 shadow-lg bg-white/5" onclick="window.selectAvatarPart('legs')"><span class="sr-only">Legs</span></button>
             </div>
             <div class="flex justify-between text-xs text-gray-500 font-bold uppercase tracking-wider mb-4 px-2">
                 <span>Head</span><span>Torso</span><span>Arms</span><span>Legs</span>
@@ -211,7 +211,7 @@
             <div id="avatar-palette" class="flex flex-wrap gap-4 justify-center mb-10">
                 <!-- Populated by JS -->
             </div>
-            <button class="w-full bg-white text-black hover:bg-gray-200 p-4 rounded-2xl font-bold text-lg transition-transform hover:scale-[1.02] shadow-xl" onclick="closeAvatarModal()">Save & Apply</button>
+            <button class="w-full bg-white text-black hover:bg-gray-200 p-4 rounded-2xl font-bold text-lg transition-transform hover:scale-[1.02] shadow-xl" onclick="window.closeAvatarModal()">Save & Apply</button>
         </div>
     </div>
 
@@ -220,7 +220,7 @@
         <div class="glass-panel rounded-3xl w-[600px] h-[650px] flex flex-col shadow-2xl overflow-hidden border border-white/10">
             <div class="p-6 flex justify-between items-center border-b border-white/5 bg-white/5">
                 <h2 class="font-black text-2xl text-white tracking-tight flex items-center gap-3">Global Chat</h2>
-                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-10 h-10 flex items-center justify-center rounded-full transition-all" onclick="closeHubChatModal()">
+                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-10 h-10 flex items-center justify-center rounded-full transition-all" onclick="window.closeHubChatModal()">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -322,7 +322,7 @@
         
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- GLOBAL STATE ---
         let db, auth, currentUser = null;
@@ -332,6 +332,7 @@
         let currentRoomId = 'hub';
         const otherPlayers = {}; 
         let unsubscribeRoom = null;
+        let chatUnsubscribe = null;
         let lastSyncPos = new THREE.Vector3();
         let isChatting = false;
         let isInteracting = false;
@@ -406,6 +407,28 @@
         }
 
         // --- UI LOGIC ---
+        window.showAvatarModal = () => document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
+        window.closeAvatarModal = () => document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+        window.showHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('hidden', 'flex');
+        window.closeHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('flex', 'hidden');
+        window.showAuthModal = () => document.getElementById('auth-modal').classList.replace('hidden', 'flex');
+        window.closeAuthModal = () => document.getElementById('auth-modal').classList.replace('flex', 'hidden');
+
+        window.selectAvatarPart = (part) => {
+            window.currentAvatarPart = part;
+            document.querySelectorAll('.avatar-part-btn').forEach(btn => btn.classList.replace('border-blue-500', 'border-transparent'));
+            document.getElementById(`btn-part-${part}`).classList.replace('border-transparent', 'border-blue-500');
+        };
+
+        window.setAvatarColor = (hex) => {
+            myAvatarColors[window.currentAvatarPart] = hex;
+            localStorage.setItem('weblox_avatar', JSON.stringify(myAvatarColors));
+            document.getElementById(`btn-part-${window.currentAvatarPart}`).style.backgroundColor = '#' + hex.toString(16).padStart(6, '0');
+            const avatarPrev = document.getElementById('hub-avatar-preview');
+            if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
+            if(myAvatarMesh) { myAvatarMesh.userData.mats[window.currentAvatarPart].color.setHex(hex); }
+        };
+
         function initAvatarUI() {
             const paletteDiv = document.getElementById('avatar-palette');
             if(!paletteDiv) return;
@@ -547,7 +570,7 @@
             const geo = new THREE.PlaneGeometry(1000, 1000);
             geo.rotateX(-Math.PI / 2);
             const mat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
-            baseplate = new Mesh(geo, mat);
+            baseplate = new THREE.Mesh(geo, mat);
             baseplate.receiveShadow = true;
             scene.add(baseplate);
             objects.push(baseplate);
@@ -603,7 +626,7 @@
 
             mesh.scale.set(sx, sy, sz);
 
-            mesh.userData = { type: typeId, colorHex: colorHex, script: scriptCode, scale: sx }; // simplified scale tracking
+            mesh.userData = { type: typeId, colorHex: colorHex, script: scriptCode, scale: sx }; 
 
             if (typeId !== 'Spawn') {
                 const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.3, transparent: true });
@@ -714,59 +737,143 @@
         myAvatarMesh.userData.head.visible = false; 
         scene.add(myAvatarMesh);
 
-        try {
-            const firebaseConfig = {
-                apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
-                authDomain: "weblox-1f8b0.firebaseapp.com",
-                projectId: "weblox-1f8b0",
-                storageBucket: "weblox-1f8b0.firebasestorage.app",
-                messagingSenderId: "765567900101",
-                appId: "1:765567900101:web:fa03494970c3019f1e93ac",
-                measurementId: "G-D7E2MT985J"
-            };
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
+        // -- INITIALIZE FIREBASE (Strict Compliance with Canvas Rules) --
+        const firebaseConfig = {
+            apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
+            authDomain: "weblox-1f8b0.firebaseapp.com",
+            projectId: "weblox-1f8b0",
+            storageBucket: "weblox-1f8b0.firebasestorage.app",
+            messagingSenderId: "765567900101",
+            appId: "1:765567900101:web:fa03494970c3019f1e93ac",
+            measurementId: "G-D7E2MT985J"
+        };
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
 
-            const initAuth = async () => {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        window.showAuthModal();
-                    }
-                } catch(e) { 
-                    console.warn("Auth token mismatch. Showing login modal."); 
-                    window.showAuthModal();
-                }
-            };
-            initAuth();
-
-            let authInitialized = false;
-            onAuthStateChanged(auth, (user) => { 
-                currentUser = user; 
-                if (!authInitialized) {
-                    authInitialized = true;
-                    if (!user && !(typeof __initial_auth_token !== 'undefined' && __initial_auth_token)) {
-                        window.showAuthModal();
-                    }
-                }
-                if(user) {
-                    window.closeAuthModal();
-                    const usernameEl = document.getElementById('hub-username');
-                    if(usernameEl) usernameEl.innerText = "User_" + user.uid.substring(0, 6);
-                    const avatarPrev = document.getElementById('hub-avatar-preview');
-                    if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
-                    if (window.fetchCommunityGames) window.fetchCommunityGames();
-                    initMultiplayer();
-                    initChat();
+        // RULE 3 - Always call signIn FIRST and await it.
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    const list = document.getElementById('community-games-list');
-                    if(list) list.innerHTML = '<div class="text-gray-500 w-full py-20 flex flex-col items-center gap-4"><div class="text-6xl opacity-30 drop-shadow-lg mb-2">🔒</div><p class="font-bold text-xl text-gray-400">Please sign in to view experiences.</p></div>';
+                    await signInAnonymously(auth);
                 }
-            });
-        } catch(e) { console.error("Firebase init failed:", e); }
+            } catch(e) { 
+                console.warn("Auth token mismatch. Falling back to anonymous login.", e); 
+                await signInAnonymously(auth).catch(err => console.error("Anon auth failed", err));
+            }
+        };
+        initAuth();
 
+        let authInitialized = false;
+        onAuthStateChanged(auth, (user) => { 
+            currentUser = user; 
+            if (!authInitialized) {
+                authInitialized = true;
+            }
+            if(user) {
+                window.closeAuthModal();
+                const usernameEl = document.getElementById('hub-username');
+                if(usernameEl) usernameEl.innerText = "User_" + user.uid.substring(0, 6);
+                const avatarPrev = document.getElementById('hub-avatar-preview');
+                if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
+                if (window.fetchCommunityGames) window.fetchCommunityGames();
+                initMultiplayer();
+                initChat();
+            } else {
+                window.showAuthModal();
+            }
+        });
+
+        // -- AUTH MODAL FUNCTIONS --
+        window.loginGuest = async () => { await signInAnonymously(auth); };
+        window.loginAccount = async () => {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-password').value;
+            if (e && p) await signInWithEmailAndPassword(auth, e, p).catch(err => window.showNotification("Login Failed: " + err.message));
+        };
+        window.registerAccount = async () => {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-password').value;
+            if (e && p) await createUserWithEmailAndPassword(auth, e, p).catch(err => window.showNotification("Registration Failed: " + err.message));
+        };
+
+        // --- GLOBAL CHAT SYNC (Rule 1 & 2 Compliant) ---
+        function initChat() {
+            if(!currentUser || !db) return;
+            if (chatUnsubscribe) chatUnsubscribe();
+            
+            // Note: Rule states: allow write to /global_chat/{roomId}
+            // By using addDoc to the collection directly, Firestore auto-generates 
+            // the {roomId} for each message document perfectly complying with the rule.
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'global_chat');
+            
+            chatUnsubscribe = onSnapshot(chatCol, (snapshot) => {
+                const msgs = [];
+                snapshot.forEach(docSnap => msgs.push({ id: docSnap.id, ...docSnap.data() }));
+                // No Complex Queries allowed in backend, sort in memory
+                msgs.sort((a, b) => a.timestamp - b.timestamp);
+
+                const chatHtml = msgs.slice(-50).map(m =>
+                    `<div class="chat-msg"><span class="chat-author" style="color: ${m.color || '#4fc3f7'}">${m.username || 'User_' + m.uid.substring(0,6)}:</span> ${m.text}</div>`
+                ).join('');
+
+                const hubChat = document.getElementById('hub-chat-messages');
+                if (hubChat) { hubChat.innerHTML = chatHtml; hubChat.scrollTop = hubChat.scrollHeight; }
+                const gameChat = document.getElementById('chat-messages');
+                if (gameChat) { gameChat.innerHTML = chatHtml; gameChat.scrollTop = gameChat.scrollHeight; }
+            }, (err) => console.error("Chat sync error", err));
+        }
+
+        window.sendHubChat = async function() {
+            const input = document.getElementById('hub-chat-input');
+            const text = input.value.trim();
+            if(!text || !currentUser || !db) return;
+            input.value = '';
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
+                    uid: currentUser.uid,
+                    text: text,
+                    timestamp: Date.now(),
+                    color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
+                });
+            } catch(e) { console.error("Chat send error", e); }
+        };
+
+        function toggleChat(show) {
+            const container = document.getElementById('chat-input-container');
+            const input = document.getElementById('chat-input');
+            isChatting = show;
+            if (show) {
+                container.style.display = 'block';
+                if (isPointerLocked) unlockPointer();
+                setTimeout(() => input.focus(), 10);
+            } else {
+                container.style.display = 'none';
+                input.value = '';
+                if (!isPaused && isInGame && activeCamera === camera) lockPointer();
+            }
+        }
+
+        document.getElementById('chat-input').addEventListener('keydown', async (e) => {
+            if(e.key === 'Enter') {
+                const text = e.target.value.trim();
+                if(text && currentUser && db) {
+                    try {
+                        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
+                            uid: currentUser.uid,
+                            text: text,
+                            timestamp: Date.now(),
+                            color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
+                        });
+                    } catch(err) { console.error("Chat error", err); }
+                }
+                toggleChat(false);
+            }
+        });
+
+        // --- MULTIPLAYER PRESENCE & SYNC (Rule 1 & 2 Compliant) ---
         window.joinRoom = function(roomId) {
             currentRoomId = roomId;
             for(let id in otherPlayers) {
@@ -774,6 +881,7 @@
                 delete otherPlayers[id];
             }
             if (unsubscribeRoom) unsubscribeRoom();
+            if (!currentUser || !db) return;
 
             try {
                 const roomCol = collection(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players');
@@ -882,9 +990,14 @@
                     if(now - otherPlayers[id].userData.lastUpdate > 5000) {
                         scene.remove(otherPlayers[id]);
                         delete otherPlayers[id];
+                    } else {
+                        // Smoothly interpolate other players
+                        const p = otherPlayers[id];
+                        p.position.lerp(p.userData.targetPos, 0.2);
+                        p.rotation.y += (p.userData.targetRot - p.rotation.y) * 0.2;
                     }
                 }
-            }, 2000);
+            }, 1000/30); // 30fps interp tick
         }
 
         // --- CONTROLS & INTERACTION ---
@@ -920,7 +1033,7 @@
         const mouse = new THREE.Vector2(0, 0);
 
         document.addEventListener('mousedown', (e) => {
-            if (e.target.closest('#ui-layer') || e.target.closest('#script-modal') || e.target.closest('#publish-modal') || e.target.closest('#auth-modal') || e.target.closest('#pause-menu') || e.target.closest('#hub')) return;
+            if (e.target.closest('#ui-layer') || e.target.closest('#script-modal') || e.target.closest('#publish-modal') || e.target.closest('#auth-modal') || e.target.closest('#pause-menu') || e.target.closest('#hub') || e.target.closest('#avatar-modal') || e.target.closest('#hub-chat-modal')) return;
 
             if (e.button === 2) {
                 isRightMouseDown = true;
@@ -1013,7 +1126,6 @@
 
         document.addEventListener('keydown', (e) => {
             if (isTyping()) {
-                if(isChatting && e.code === 'Enter') window.sendHubChat();
                 if(isChatting && e.code === 'Escape') toggleChat(false);
                 return;
             }
@@ -1362,7 +1474,7 @@
                 }
             }
 
-            let targetFov = isSprinting ? 95 : 75;
+            let targetFov = isSSprintting ? 95 : 75;
             camera.fov += (targetFov - camera.fov) * 0.1; camera.updateProjectionMatrix();
             thirdPersonCamera.fov += (targetFov - thirdPersonCamera.fov) * 0.1; thirdPersonCamera.updateProjectionMatrix();
 
@@ -1511,6 +1623,7 @@
             cssRenderer.render(scene, activeCamera);
         }
 
+        // --- GAME PLAY & BROWSER ---
         window.fetchCommunityGames = async () => {
             const list = document.getElementById('community-games-list'); 
             if(!currentUser || !db) {
@@ -1531,8 +1644,48 @@
                     btn.className = "cursor-pointer group flex flex-col gap-3 shrink-0 w-[300px] snap-start transition-all duration-500 hover:-translate-y-2";
                     const gradients = ['from-red-500 to-orange-600', 'from-blue-600 to-indigo-600', 'from-emerald-500 to-teal-700', 'from-amber-400 to-orange-500', 'from-violet-500 to-fuchsia-600', 'from-pink-500 to-rose-600'];
                     const colorScore = (game.name.charCodeAt(0) || 0) + (game.name.length); const gradient = gradients[colorScore % gradients.length];
-                    const fakeUpvotes = Math.floor(Math.random() * 20) + 80; const fakePlayers = Math.floor(Math.random() * 500) + 1;
                     
                     btn.innerHTML = `
                         <div class="aspect-video bg-gradient-to-br ${gradient} rounded-3xl overflow-hidden relative shadow-lg mb-2 border border-white/10 group-hover:border-white/30 group-hover:shadow-[0_10px_40px_rgba(59,130,246,0.25)] transition-all duration-500">
-                            <div class="absolute inset-0 flex items-center justify-center text-white text-[5rem] font-black opacity-20 shadow-black drop-shadow-2xl uppercase tracking-tighter mix-blend-overlay scale-110 group-hover:scale-100 transition-transform duration-700 ease-out
+                            <div class="absolute inset-0 flex items-center justify-center text-white text-[5rem] font-black opacity-20 shadow-black drop-shadow-2xl uppercase tracking-tighter mix-blend-overlay scale-110 group-hover:scale-100 transition-transform duration-700 ease-out">${game.name.substring(0,2)}</div>
+                        </div>
+                        <h3 class="font-bold text-white text-lg truncate">${game.name}</h3>
+                        <p class="text-sm text-gray-400 font-medium truncate">By ${game.author}</p>
+                    `;
+                    btn.onclick = () => window.playGame(docSnap.id, game);
+                    list.appendChild(btn);
+                });
+            } catch(e) {
+                console.error("Fetch games error:", e);
+                list.innerHTML = `<div class="text-red-500 font-bold p-8 text-center">Failed to load experiences.</div>`;
+            }
+        };
+
+        window.playGame = function(gameId, gameData) {
+            document.getElementById('hub').style.display = 'none';
+            document.getElementById('game-hud').style.display = 'flex';
+            document.getElementById('current-game-title').innerText = gameData.name;
+            document.getElementById('current-game-author').innerText = "By " + gameData.author;
+            
+            isInGame = true;
+            window.clearLevel(false);
+            
+            try {
+                const parsedData = JSON.parse(gameData.data);
+                if (parsedData.blocks) {
+                    parsedData.blocks.forEach(b => {
+                        instantiateBlock(new THREE.Vector3(b.px, b.py, b.pz), b.type, b.color, b.script, b.sx, b.sy, b.sz);
+                    });
+                }
+            } catch(e) { console.error("Error loading game data", e); }
+            
+            respawnPlayer();
+            window.joinRoom(gameId);
+            setTimeout(() => { if (activeCamera === camera && !isPaused) lockPointer(); }, 100);
+        };
+
+        requestAnimationFrame(animate);
+
+    </script>
+</body>
+</html>
