@@ -109,6 +109,7 @@
                     <a href="#" onclick="window.showAvatarModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">👤</span> Avatar</a>
                     <a href="#" onclick="window.showStoreModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">🎒</span> Store</a>
                     <a href="#" onclick="window.showHubChatModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">💬</span> Chat</a>
+                    <a href="#" onclick="window.showAdminPanel(); return false;" class="px-6 py-2.5 text-red-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">🛡️</span> Admin</a>
                 </nav>
             </div>
 
@@ -245,65 +246,74 @@
         </div>
     </div>
 
-    <!-- Accessory Editor Modal (Blender-Like) -->
+    <!-- Accessory Editor Modal -->
     <div id="accessory-editor-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/95 z-[400] text-white pointer-events-auto backdrop-blur-2xl">
         <div class="glass-panel rounded-3xl w-[1000px] h-[750px] flex flex-col shadow-2xl overflow-hidden border border-blue-500/30">
-            <div class="p-6 flex justify-between items-center border-b border-white/5 bg-blue-500/10 shrink-0">
-                <h2 class="font-black text-2xl text-blue-400 tracking-tight flex items-center gap-3">🛠️ Accessory Builder (3D)</h2>
-                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-10 h-10 flex items-center justify-center rounded-full transition-all" onclick="window.closeAccessoryEditor()">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <div class="p-4 flex justify-between items-center border-b border-white/5 bg-blue-500/10">
+                <h2 class="font-black text-xl text-blue-400 tracking-tight flex items-center gap-3">🛠️ 3D Accessory Studio</h2>
+                <button class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 w-8 h-8 flex items-center justify-center rounded-full transition-all" onclick="window.closeAccessoryEditor()">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             
             <div class="flex-1 flex overflow-hidden">
-                <!-- Left: Settings & Parts List -->
-                <div class="w-64 flex flex-col bg-black/40 border-r border-white/10 p-5 shrink-0 overflow-y-auto">
-                    <div class="mb-5">
-                        <label class="text-xs text-gray-500 font-bold uppercase mb-1 block">Accessory Name</label>
-                        <input type="text" id="acc-name" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500 text-sm font-bold" placeholder="e.g. Cool Wings" maxlength="20">
-                    </div>
-                    <div class="mb-6 border-b border-white/10 pb-6">
-                        <label class="text-xs text-gray-500 font-bold uppercase mb-1 block">Attachment Point Guide</label>
-                        <select id="acc-attachment" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500 text-sm [&>option]:bg-gray-900" onchange="window.updateAccDummy()">
-                            <option value="head">Head</option>
-                            <option value="torso">Torso</option>
-                            <option value="leftArm">Left Arm</option>
-                            <option value="rightArm">Right Arm</option>
-                            <option value="leftLeg">Left Leg</option>
-                            <option value="rightLeg">Right Leg</option>
-                        </select>
-                    </div>
-                    
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="text-xs text-gray-500 font-bold uppercase block">Parts</label>
-                        <button class="bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors" onclick="window.addAccessoryPart()">+ Add Part</button>
-                    </div>
-                    
-                    <div id="acc-parts-container" class="flex-1 flex flex-col gap-2 mb-4 overflow-y-auto pr-1">
-                        <!-- Populated by JS -->
+                <!-- Left: Settings -->
+                <div class="w-[300px] flex flex-col border-r border-white/10 bg-black/40 overflow-y-auto">
+                    <div class="p-5 flex flex-col gap-5 border-b border-white/10">
+                        <div>
+                            <label class="text-[10px] text-gray-500 font-bold uppercase mb-1 block">Accessory Name</label>
+                            <input type="text" id="acc-name" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500 text-sm" placeholder="e.g. Cool Wings" maxlength="20">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-500 font-bold uppercase mb-1 block">Attachment Point</label>
+                            <select id="acc-attachment" onchange="window.updateAccDummy()" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-blue-500 text-sm [&>option]:bg-gray-900">
+                                <option value="head">Head</option>
+                                <option value="torso">Torso</option>
+                                <option value="leftArm">Left Arm</option>
+                                <option value="rightArm">Right Arm</option>
+                                <option value="leftLeg">Left Leg</option>
+                                <option value="rightLeg">Right Leg</option>
+                            </select>
+                        </div>
+                        
+                        <button class="bg-blue-600 hover:bg-blue-500 w-full py-2.5 rounded-xl font-bold text-sm transition-transform hover:scale-[1.02] shadow-lg" onclick="window.submitAccessory()">Submit to Store</button>
+                        <p class="text-[10px] text-gray-500 text-center">Submissions require admin approval.</p>
                     </div>
 
-                    <button class="bg-blue-600 hover:bg-blue-500 w-full py-3 rounded-xl font-bold text-sm transition-transform hover:scale-[1.02] shadow-lg shrink-0" onclick="window.submitAccessory()">Submit to Store</button>
-                    <p class="text-[10px] text-gray-500 text-center mt-2 shrink-0">Submissions require admin approval.</p>
+                    <div class="p-5 flex flex-col gap-4">
+                        <div class="flex justify-between items-center">
+                            <label class="text-[10px] text-gray-500 font-bold uppercase block">Parts</label>
+                            <button class="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors" onclick="window.addAccessoryPart()">+ Add Box</button>
+                        </div>
+
+                        <!-- Selected Part Properties -->
+                        <div class="bg-white/5 border border-white/10 p-3 rounded-xl flex flex-col gap-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-gray-400">Selected Part</span>
+                                <button onclick="window.deleteSelectedAccPart()" class="text-red-400 hover:text-red-300 bg-red-400/10 px-2 py-1 rounded text-[10px] font-bold">Delete</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="btn-acc-translate" class="flex-1 bg-blue-600 py-1.5 rounded text-xs font-bold transition-colors" onclick="window.setAccTransformMode('translate')">Move</button>
+                                <button id="btn-acc-rotate" class="flex-1 bg-white/5 hover:bg-white/10 py-1.5 rounded text-xs font-bold transition-colors" onclick="window.setAccTransformMode('rotate')">Rotate</button>
+                                <button id="btn-acc-scale" class="flex-1 bg-white/5 hover:bg-white/10 py-1.5 rounded text-xs font-bold transition-colors" onclick="window.setAccTransformMode('scale')">Scale</button>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-gray-400 mt-1">
+                                Color
+                                <input type="color" id="acc-part-color" oninput="window.updateAccPartColor(this.value)" class="w-16 h-6 cursor-pointer bg-transparent border-none p-0" disabled>
+                            </div>
+                        </div>
+
+                        <div id="acc-parts-list" class="flex flex-col gap-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Right: 3D Viewport -->
-                <div class="flex-1 flex flex-col relative">
-                    <!-- Gizmo Toolbar -->
-                    <div class="absolute top-4 left-4 z-10 flex gap-2 bg-black/60 p-2 rounded-xl backdrop-blur-md border border-white/10 shadow-lg">
-                        <button class="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors tooltip" onclick="window.setAccGizmoMode('translate')" title="Move (G)">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4h4m-2-2v4m-8 6h16M4 10v4m6 8h4m-2-2v4m-8-6h16m-16-4v4"></path></svg>
-                        </button>
-                        <button class="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors tooltip" onclick="window.setAccGizmoMode('scale')" title="Scale (S)">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                        </button>
+                <!-- Right: Canvas -->
+                <div class="flex-1 relative bg-[#111113]" id="acc-editor-canvas-container">
+                    <div class="absolute top-4 left-4 text-xs text-gray-500 pointer-events-none z-10 bg-black/50 px-3 py-1.5 rounded backdrop-blur-md border border-white/10">
+                        Left Click: Select/Drag Gizmo &bull; Right Click: Pan &bull; Scroll: Zoom
                     </div>
-                    <div class="absolute top-4 right-4 z-10 bg-black/60 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/10 text-xs text-gray-400 pointer-events-none">
-                        Left Click + Drag: Rotate Camera | Right Click + Drag: Pan Camera
-                    </div>
-
-                    <!-- 3D Render Container -->
-                    <div id="acc-3d-viewport" class="flex-1 w-full h-full bg-[#1a1a1a]"></div>
                 </div>
             </div>
         </div>
@@ -451,9 +461,9 @@
     <script type="module">
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-        import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
+        import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
         
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -493,12 +503,15 @@
         let myUsername = localStorage.getItem('weblox_username') || "";
         window.currentAvatarPart = 'head';
 
-        // Accessory Draft Config (3D Editor)
-        let draftingAccessory = { parts: [] };
-        let accScene, accCamera, accRenderer, accOrbit, accTransform, accDummyMesh;
-        let accMeshes = [];
-        let accSelectedIdx = -1;
-        let accAnimFrameId = null;
+        // 3D Accessory Editor Variables
+        window.accParts = [];
+        let accScene, accCamera, accRenderer, accOrbit, accTransform;
+        let accDummyGroup;
+        let selectedAccPart = null;
+        let accRaycaster = new THREE.Raycaster();
+        let accMouse = new THREE.Vector2();
+        let isAccEditorOpen = false;
+        let accCanvasContainer;
 
         const UNIT_SIZE = 5;
         let objects = []; 
@@ -525,27 +538,15 @@
         };
 
         // --- FIREBASE INITIALIZATION & AUTH ---
-        let firebaseConfig;
-        try {
-            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
-            }
-        } catch (e) {
-            console.warn("Could not parse injected Firebase config, using fallback.", e);
-        }
-
-        if (!firebaseConfig) {
-            firebaseConfig = {
-                apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
-                authDomain: "weblox-1f8b0.firebaseapp.com",
-                projectId: "weblox-1f8b0",
-                storageBucket: "weblox-1f8b0.firebasestorage.app",
-                messagingSenderId: "765567900101",
-                appId: "1:765567900101:web:fa03494970c3019f1e93ac",
-                measurementId: "G-D7E2MT985J"
-            };
-        }
-        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
+            authDomain: "weblox-1f8b0.firebaseapp.com",
+            projectId: "weblox-1f8b0",
+            storageBucket: "weblox-1f8b0.firebasestorage.app",
+            messagingSenderId: "765567900101",
+            appId: "1:765567900101:web:fa03494970c3019f1e93ac",
+            measurementId: "G-D7E2MT985J"
+        };
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
@@ -559,12 +560,7 @@
                 }
             } catch(e) { 
                 console.warn("Auth token mismatch. Falling back to anonymous login.", e); 
-                try {
-                    await signInAnonymously(auth);
-                } catch (err) {
-                    console.error("Anon auth failed", err);
-                    window.showNotification("Firebase Auth Error: Enable Anonymous Login in Firebase Console.");
-                }
+                await signInAnonymously(auth).catch(err => console.error("Anon auth failed", err));
             }
         };
         initAuth();
@@ -684,224 +680,299 @@
             }
         }, 100);
 
-        // --- ACCESSORY EDITOR LOGIC (BLENDER-LIKE 3D) ---
-        function initAcc3D() {
-            const container = document.getElementById('acc-3d-viewport');
-            if(accRenderer || !container) return;
+        // --- AUDIO ENGINE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
             
+            if (type === 'jump') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'boom') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(20, now + 0.5);
+                gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+            } else if (type === 'hurt') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'place') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now); osc.stop(now + 0.05);
+            }
+        }
+
+        // --- UI LOGIC ---
+        window.showNotification = function(msg) {
+            const notif = document.getElementById('notification');
+            if(!notif) return;
+            notif.innerText = msg;
+            notif.style.opacity = 1;
+            setTimeout(() => notif.style.opacity = 0, 3000);
+        };
+
+        window.updateLocalAvatar = () => {
+            if(myAvatarMesh) { scene.remove(myAvatarMesh); }
+            myAvatarMesh = createAvatarMesh(myAvatarColors);
+            myAvatarMesh.position.copy(playerObject.position);
+            myAvatarMesh.position.y -= 9; 
+            myAvatarMesh.rotation.y = cameraYaw;
+            myAvatarMesh.userData.head.visible = (activeCamera === thirdPersonCamera);
+            scene.add(myAvatarMesh);
+            localStorage.setItem('weblox_avatar', JSON.stringify(myAvatarColors));
+        };
+
+        window.showAvatarModal = () => {
+            document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
+            window.renderEquippedAccessories();
+        };
+        
+        window.closeAvatarModal = () => {
+            const newName = document.getElementById('avatar-username').value.trim();
+            if (newName) {
+                myUsername = newName;
+                localStorage.setItem('weblox_username', myUsername);
+                document.getElementById('hub-username').innerText = myUsername;
+            }
+            window.updateLocalAvatar();
+            document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+        };
+
+        window.showHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('hidden', 'flex');
+        window.closeHubChatModal = () => document.getElementById('hub-chat-modal').classList.replace('flex', 'hidden');
+        window.showAuthModal = () => document.getElementById('auth-modal').classList.replace('hidden', 'flex');
+        window.closeAuthModal = () => document.getElementById('auth-modal').classList.replace('flex', 'hidden');
+        window.showStoreModal = () => {
+            document.getElementById('store-modal').classList.replace('hidden', 'flex');
+            window.fetchStoreItems();
+        };
+        window.closeStoreModal = () => document.getElementById('store-modal').classList.replace('flex', 'hidden');
+
+        // --- ACCESSORY EDITOR LOGIC ---
+        function initAccessoryEditor() {
+            accCanvasContainer = document.getElementById('acc-editor-canvas-container');
+            if (!accCanvasContainer) return;
+
             accScene = new THREE.Scene();
-            accScene.background = new THREE.Color(0x1a1a1c);
+            accScene.background = new THREE.Color(0x111113);
             
-            // Grid & Lighting
-            accScene.add(new THREE.GridHelper(10, 10, 0x444444, 0x222222));
-            accScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            accScene.add(new THREE.GridHelper(10, 10, 0x4fc3f7, 0x333333));
+            accScene.add(new THREE.AmbientLight(0x606060));
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
             dirLight.position.set(5, 10, 5);
             accScene.add(dirLight);
 
-            // Camera
-            accCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
-            accCamera.position.set(5, 5, 5);
-            accCamera.lookAt(0,0,0);
+            accCamera = new THREE.PerspectiveCamera(50, accCanvasContainer.clientWidth / accCanvasContainer.clientHeight, 0.1, 100);
+            accCamera.position.set(3, 3, 5);
 
-            // Renderer
-            accRenderer = new THREE.WebGLRenderer({antialias: true});
-            accRenderer.setSize(container.clientWidth, container.clientHeight);
-            container.appendChild(accRenderer.domElement);
+            accRenderer = new THREE.WebGLRenderer({ antialias: true });
+            accRenderer.setSize(accCanvasContainer.clientWidth, accCanvasContainer.clientHeight);
+            accCanvasContainer.appendChild(accRenderer.domElement);
 
-            // Orbit Controls (Camera Movement)
             accOrbit = new OrbitControls(accCamera, accRenderer.domElement);
             accOrbit.enableDamping = true;
-            accOrbit.dampingFactor = 0.1;
 
-            // Transform Controls (Gizmos)
             accTransform = new TransformControls(accCamera, accRenderer.domElement);
-            accTransform.addEventListener('dragging-changed', (e) => {
-                accOrbit.enabled = !e.value; // Disable camera orbit while dragging gizmo
-            });
-            accTransform.addEventListener('change', () => {
-                // Write 3D mesh transforms back to the UI data model instantly
-                if(accSelectedIdx > -1 && accMeshes[accSelectedIdx]) {
-                    const mesh = accMeshes[accSelectedIdx];
-                    const p = draftingAccessory.parts[accSelectedIdx];
-                    p.px = mesh.position.x; p.py = mesh.position.y; p.pz = mesh.position.z;
-                    p.sx = Math.max(0.1, mesh.scale.x); p.sy = Math.max(0.1, mesh.scale.y); p.sz = Math.max(0.1, mesh.scale.z);
-                    mesh.scale.set(p.sx, p.sy, p.sz); // Enforce min scale visually
-                }
+            accTransform.addEventListener('dragging-changed', function (event) {
+                accOrbit.enabled = !event.value;
             });
             accScene.add(accTransform);
 
-            // Dummy Guide Mesh (Wireframe representation of the body part)
-            accDummyMesh = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshBasicMaterial({color: 0x555555, wireframe: true, transparent: true, opacity: 0.3}));
-            accScene.add(accDummyMesh);
+            accDummyGroup = new THREE.Group();
+            accScene.add(accDummyGroup);
 
-            // Handle Clicks to select parts in 3D viewport
-            const accRaycaster = new THREE.Raycaster();
-            const accMouse = new THREE.Vector2();
-            accRenderer.domElement.addEventListener('pointerdown', (e) => {
-                if(accTransform.dragging) return;
-                const rect = accRenderer.domElement.getBoundingClientRect();
-                accMouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                accMouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-                accRaycaster.setFromCamera(accMouse, accCamera);
-                const intersects = accRaycaster.intersectObjects(accMeshes, false);
-                if(intersects.length > 0) {
-                    const hitMesh = intersects[0].object;
-                    const idx = accMeshes.indexOf(hitMesh);
-                    window.selectAccPart(idx);
-                } else {
-                    accTransform.detach();
-                    accSelectedIdx = -1;
-                    window.renderAccParts(); // Update UI selection styling
+            accRenderer.domElement.addEventListener('mousedown', onAccEditorMouseDown, false);
+        }
+
+        function onAccEditorMouseDown(event) {
+            const rect = accRenderer.domElement.getBoundingClientRect();
+            accMouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            accMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            accRaycaster.setFromCamera(accMouse, accCamera);
+            const intersects = accRaycaster.intersectObjects(window.accParts, false);
+
+            if (intersects.length > 0) {
+                window.selectAccPart(intersects[0].object);
+            } else if (!accTransform.dragging) {
+                window.selectAccPart(null);
+            }
+        }
+
+        window.setAccTransformMode = (mode) => {
+            if(accTransform) accTransform.setMode(mode);
+            ['translate', 'rotate', 'scale'].forEach(m => {
+                const btn = document.getElementById(`btn-acc-${m}`);
+                if(btn) {
+                    if(m === mode) btn.classList.replace('bg-white/5', 'bg-blue-600');
+                    else btn.classList.replace('bg-blue-600', 'bg-white/5');
                 }
             });
-        }
-
-        function accAnimateLoop() {
-            if (document.getElementById('accessory-editor-modal').classList.contains('hidden')) return;
-            accAnimFrameId = requestAnimationFrame(accAnimateLoop);
-            if(accOrbit) accOrbit.update();
-            if(accRenderer && accScene && accCamera) accRenderer.render(accScene, accCamera);
-        }
-
-        window.openAccessoryEditor = () => {
-            draftingAccessory = { parts: [] };
-            accMeshes.forEach(m => { if(m.parent) m.parent.remove(m); });
-            accMeshes = [];
-            accSelectedIdx = -1;
-            
-            document.getElementById('acc-name').value = '';
-            document.getElementById('acc-attachment').value = 'head';
-            
-            document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
-            document.getElementById('accessory-editor-modal').classList.replace('hidden', 'flex');
-            
-            initAcc3D();
-            if(accTransform) accTransform.detach();
-            window.updateAccDummy();
-            window.renderAccParts();
-
-            // Resize renderer to fit modal layout accurately
-            const container = document.getElementById('acc-3d-viewport');
-            accRenderer.setSize(container.clientWidth, container.clientHeight);
-            accCamera.aspect = container.clientWidth / container.clientHeight;
-            accCamera.updateProjectionMatrix();
-
-            accAnimateLoop(); // Start isolated 3D render loop
-        };
-
-        window.closeAccessoryEditor = () => {
-            if(accAnimFrameId) cancelAnimationFrame(accAnimFrameId);
-            document.getElementById('accessory-editor-modal').classList.replace('flex', 'hidden');
-            document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
-        };
-
-        window.setAccGizmoMode = (mode) => {
-            if(accTransform) accTransform.setMode(mode); // 'translate' or 'scale'
-        };
-
-        window.updateAccDummy = () => {
-            if(!accDummyMesh) return;
-            const att = document.getElementById('acc-attachment').value;
-            let w=2, h=2, d=2;
-            if(att === 'torso') { w=2.5; h=3; d=1; }
-            else if(att === 'leftArm' || att === 'rightArm' || att === 'leftLeg' || att === 'rightLeg') { w=1; h=2; d=1; }
-            accDummyMesh.geometry.dispose();
-            accDummyMesh.geometry = new THREE.BoxGeometry(w, h, d);
         };
 
         window.addAccessoryPart = () => {
-            const newPart = {px: 0, py: 1.5, pz: 0, sx: 1, sy: 1, sz: 1, colorHex: 0xffffff};
-            draftingAccessory.parts.push(newPart);
-            
-            const mat = new THREE.MeshLambertMaterial({color: newPart.colorHex});
+            const mat = new THREE.MeshLambertMaterial({color: 0xffffff});
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
-            mesh.position.set(newPart.px, newPart.py, newPart.pz);
-            
-            const edgesMat = new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.3, transparent: true });
-            mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgesMat));
-
+            mesh.position.y = 1;
             accScene.add(mesh);
-            accMeshes.push(mesh);
-            
-            window.selectAccPart(accMeshes.length - 1);
+            window.accParts.push(mesh);
+            window.selectAccPart(mesh);
+            window.renderAccPartsList();
         };
 
-        window.selectAccPart = (index) => {
-            accSelectedIdx = index;
-            accTransform.attach(accMeshes[index]);
-            window.renderAccParts();
+        window.selectAccPartByIndex = (index) => {
+            window.selectAccPart(window.accParts[index]);
         };
 
-        window.updateAccPartColor = (index, hexString) => {
-            const hexInt = parseInt(hexString.replace('#', ''), 16);
-            draftingAccessory.parts[index].colorHex = hexInt;
-            accMeshes[index].material.color.setHex(hexInt);
-        };
-
-        window.removeAccPart = (index) => {
-            if(accSelectedIdx === index) { accTransform.detach(); accSelectedIdx = -1; }
-            const mesh = accMeshes[index];
-            accScene.remove(mesh);
-            draftingAccessory.parts.splice(index, 1);
-            accMeshes.splice(index, 1);
-            
-            // Re-bind transform if selection shifted
-            if(accSelectedIdx > index) accSelectedIdx--;
-            if(accSelectedIdx > -1) accTransform.attach(accMeshes[accSelectedIdx]);
-
-            window.renderAccParts();
-        };
-
-        window.renderAccParts = () => {
-            const container = document.getElementById('acc-parts-container');
-            if (draftingAccessory.parts.length === 0) {
-                container.innerHTML = `<div class="text-xs text-gray-500 italic p-2 text-center">No parts added.</div>`;
-                return;
+        window.selectAccPart = (mesh) => {
+            selectedAccPart = mesh;
+            if (mesh) {
+                accTransform.attach(mesh);
+                const hex = '#' + mesh.material.color.getHexString();
+                document.getElementById('acc-part-color').value = hex;
+                document.getElementById('acc-part-color').disabled = false;
+            } else {
+                accTransform.detach();
+                document.getElementById('acc-part-color').disabled = true;
             }
+            window.renderAccPartsList();
+        };
 
-            container.innerHTML = draftingAccessory.parts.map((p, i) => {
-                const isSelected = (accSelectedIdx === i);
-                const borderClass = isSelected ? 'border-blue-500 bg-blue-500/10' : 'border-white/10 bg-black/40';
-                return `
-                    <div class="border p-3 rounded-xl relative cursor-pointer transition-colors ${borderClass}" onclick="window.selectAccPart(${i})">
-                        <button onclick="event.stopPropagation(); window.removeAccPart(${i})" class="absolute top-2 right-2 text-red-500 hover:text-white bg-white/5 hover:bg-red-500/50 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold transition-colors">X</button>
-                        <b class="text-sm block mb-2 text-white">Part ${i+1}</b>
-                        <div class="flex justify-between items-center text-xs">
-                            <label class="text-gray-400 flex items-center gap-2">Color: 
-                                <input type="color" value="${'#'+p.colorHex.toString(16).padStart(6,'0')}" onchange="window.updateAccPartColor(${i}, this.value)" class="w-8 h-8 rounded cursor-pointer border-none bg-transparent">
-                            </label>
-                            ${isSelected ? `<span class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded font-bold">Selected</span>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+        window.deleteSelectedAccPart = () => {
+            if (!selectedAccPart) return;
+            accTransform.detach();
+            accScene.remove(selectedAccPart);
+            window.accParts = window.accParts.filter(p => p !== selectedAccPart);
+            selectedAccPart = null;
+            window.renderAccPartsList();
+            document.getElementById('acc-part-color').disabled = true;
+        };
+
+        window.updateAccPartColor = (hex) => {
+            if (!selectedAccPart) return;
+            selectedAccPart.material.color.setHex(parseInt(hex.replace('#', ''), 16));
+        };
+
+        window.updateAccDummy = () => {
+            const att = document.getElementById('acc-attachment').value;
+            accDummyGroup.clear();
+            let geom;
+            if(att === 'head') geom = new THREE.BoxGeometry(2, 2, 2);
+            else if(att === 'torso') geom = new THREE.BoxGeometry(2.5, 3, 1);
+            else geom = new THREE.BoxGeometry(1, 2, 1);
+
+            const mat = new THREE.MeshBasicMaterial({color: 0x888888, transparent: true, opacity: 0.2, wireframe: true});
+            const mesh = new THREE.Mesh(geom, mat);
+            accDummyGroup.add(mesh);
+        };
+
+        window.renderAccPartsList = () => {
+            const container = document.getElementById('acc-parts-list');
+            container.innerHTML = window.accParts.map((p, i) => `
+                <button onclick="window.selectAccPartByIndex(${i})" class="text-left px-3 py-2 text-xs font-bold rounded-lg transition-colors border ${selectedAccPart === p ? 'bg-blue-600/20 border-blue-500 text-blue-300' : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'}">
+                    Part ${i + 1}
+                </button>
+            `).join('');
+        };
+
+        window.openAccessoryEditor = () => {
+            if(!accScene) initAccessoryEditor();
+            
+            window.accParts.forEach(p => accScene.remove(p));
+            window.accParts = [];
+            accTransform.detach();
+            selectedAccPart = null;
+            
+            document.getElementById('acc-name').value = '';
+            document.getElementById('acc-attachment').value = 'head';
+            window.updateAccDummy();
+            window.setAccTransformMode('translate');
+            window.renderAccPartsList();
+
+            document.getElementById('avatar-modal').classList.replace('flex', 'hidden');
+            document.getElementById('accessory-editor-modal').classList.replace('hidden', 'flex');
+            
+            isAccEditorOpen = true;
+            
+            setTimeout(() => {
+                accCamera.aspect = accCanvasContainer.clientWidth / accCanvasContainer.clientHeight;
+                accCamera.updateProjectionMatrix();
+                accRenderer.setSize(accCanvasContainer.clientWidth, accCanvasContainer.clientHeight);
+            }, 50);
+
+            requestAnimationFrame(function loop() {
+                if(!isAccEditorOpen) return;
+                accOrbit.update();
+                accRenderer.render(accScene, accCamera);
+                requestAnimationFrame(loop);
+            });
+        };
+
+        window.closeAccessoryEditor = () => {
+            isAccEditorOpen = false;
+            document.getElementById('accessory-editor-modal').classList.replace('flex', 'hidden');
+            document.getElementById('avatar-modal').classList.replace('hidden', 'flex');
         };
 
         window.submitAccessory = async () => {
             const name = document.getElementById('acc-name').value.trim();
             const att = document.getElementById('acc-attachment').value;
-            if(!name || draftingAccessory.parts.length === 0) {
+            if(!name || window.accParts.length === 0) {
                 window.showNotification("Must have a name and at least 1 part.");
                 return;
             }
-            if(!currentUser || !db) return;
+            
+            if(!currentUser || !db) {
+                window.showNotification("Please sign in or continue as guest to save!");
+                return;
+            }
+
+            const partsData = window.accParts.map(mesh => ({
+                px: parseFloat(mesh.position.x.toFixed(3)),
+                py: parseFloat(mesh.position.y.toFixed(3)),
+                pz: parseFloat(mesh.position.z.toFixed(3)),
+                rx: parseFloat(mesh.rotation.x.toFixed(3)),
+                ry: parseFloat(mesh.rotation.y.toFixed(3)),
+                rz: parseFloat(mesh.rotation.z.toFixed(3)),
+                sx: parseFloat(mesh.scale.x.toFixed(3)),
+                sy: parseFloat(mesh.scale.y.toFixed(3)),
+                sz: parseFloat(mesh.scale.z.toFixed(3)),
+                colorHex: mesh.material.color.getHex()
+            }));
+
+            const newAccessory = {
+                id: 'local-' + Date.now(),
+                name: name,
+                author: myUsername || "User",
+                uid: currentUser.uid,
+                attachment: att,
+                parts: partsData,
+                status: 'pending',
+                timestamp: Date.now()
+            };
 
             try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'accessories'), {
-                    name: name,
-                    author: myUsername || "User",
-                    uid: currentUser.uid,
-                    attachment: att,
-                    parts: draftingAccessory.parts,
-                    status: 'pending',
-                    timestamp: Date.now()
-                });
-                window.showNotification("Accessory submitted for review!");
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'accessories'), newAccessory);
+                window.showNotification("Accessory submitted to the store for review!");
                 window.closeAccessoryEditor();
             } catch(e) { 
                 console.error("Submit Error:", e);
-                window.showNotification("Firestore Rules block new collections. See prompt.");
+                // Fallback: If Firebase blocks writes, save it to local store so work isn't lost
+                window.showNotification("Cloud save blocked. Added to your Local Store!");
+                newAccessory.status = 'approved'; 
+                let localStore = JSON.parse(localStorage.getItem('weblox_local_store')) || [];
+                localStore.push(newAccessory);
+                localStorage.setItem('weblox_local_store', JSON.stringify(localStore));
+                
+                window.equipAccessory(newAccessory);
+                window.closeAccessoryEditor();
             }
         };
 
@@ -914,11 +985,15 @@
 
         window.fetchStoreItems = async () => {
             const list = document.getElementById('store-items-list');
+            let localStoreItems = JSON.parse(localStorage.getItem('weblox_local_store')) || [];
+            
             try {
                 const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'accessories'));
                 const items = [];
                 snap.forEach(d => { if(d.data().status === 'approved') items.push({id: d.id, ...d.data()}); });
                 
+                localStoreItems.forEach(item => items.push(item)); // Mix in locally saved items
+
                 if (items.length === 0) items.push(MOCK_ACCESSORY); // Fallback for strict rules
 
                 list.innerHTML = items.map(item => {
@@ -938,17 +1013,26 @@
                     `;
                 }).join('');
             } catch(e) { 
+                const fallbackItems = [...localStoreItems, MOCK_ACCESSORY];
                 list.innerHTML = `
-                    <div class="col-span-3">
-                        <div class="text-red-400 text-center mb-4">Store connection restricted by strict backend rules. Showing fallback item.</div>
-                        <div class="bg-black/40 p-5 rounded-2xl border border-white/10 flex flex-col justify-between w-64 mx-auto">
-                            <div>
-                                <h3 class="font-black text-lg text-white mb-1">Weblox Cap</h3>
-                                <p class="text-xs text-gray-400 mb-3">By System | head</p>
+                    <div class="col-span-3 text-red-400 text-center mb-4">Store connection restricted by strict backend rules. Showing local items.</div>
+                    ${fallbackItems.map(item => {
+                        const isOwned = myAvatarColors.accessories.some(a => a.id === item.id);
+                        return `
+                            <div class="bg-black/40 p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                                <div>
+                                    <h3 class="font-black text-lg text-white mb-1 truncate">${item.name}</h3>
+                                    <p class="text-xs text-gray-400 mb-3">By ${item.author} | ${item.attachment}</p>
+                                    <div class="text-[10px] text-gray-500 mb-4">${item.parts.length} part(s)</div>
+                                </div>
+                                ${isOwned ? 
+                                    `<button class="w-full bg-white/10 text-gray-400 py-2 rounded-xl font-bold text-sm cursor-not-allowed">Owned</button>` :
+                                    `<button class="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-xl font-bold text-sm transition-colors" onclick='window.equipAccessory(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Equip</button>`
+                                }
                             </div>
-                            <button class="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-xl font-bold text-sm transition-colors" onclick='window.equipAccessory(${JSON.stringify(MOCK_ACCESSORY).replace(/'/g, "&#39;")})'>Equip</button>
-                        </div>
-                    </div>`; 
+                        `;
+                    }).join('')}
+                `; 
             }
         };
 
@@ -1099,7 +1183,6 @@
             } catch(e) { window.showNotification("Permission Denied: Check Rules"); }
         };
 
-        // --- AVATAR UI & HUD LOGIC ---
         window.selectAvatarPart = (part) => {
             window.currentAvatarPart = part;
             document.querySelectorAll('.avatar-part-btn').forEach(btn => btn.classList.replace('border-blue-500', 'border-transparent'));
@@ -1404,8 +1487,10 @@
                 const accGroup = new THREE.Group();
                 acc.parts.forEach(p => {
                     const mat = new THREE.MeshLambertMaterial({color: p.colorHex});
-                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.sx, p.sy, p.sz), mat);
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
                     mesh.position.set(p.px, p.py, p.pz);
+                    mesh.scale.set(p.sx, p.sy, p.sz);
+                    mesh.rotation.set(p.rx || 0, p.ry || 0, p.rz || 0);
                     mesh.castShadow = true;
                     accGroup.add(mesh);
                 });
@@ -1434,252 +1519,6 @@
         let myAvatarMesh = createAvatarMesh(myAvatarColors);
         myAvatarMesh.userData.head.visible = false; 
         scene.add(myAvatarMesh);
-
-        // --- CONTROLS & INTERACTION ---
-        let isPointerLocked = false;
-        
-        function lockPointer() { if (!isPointerLocked && !isPaused) document.body.requestPointerLock(); }
-        function unlockPointer() { if (isPointerLocked) document.exitPointerLock(); }
-
-        document.addEventListener('pointerlockchange', () => {
-            isPointerLocked = (document.pointerLockElement === document.body);
-            if (!isPointerLocked) {
-                moveFwd = false; moveBwd = false; moveL = false; moveR = false;
-                if (isInGame && !isChatting && !isInteracting && !isPaused && document.getElementById('auth-modal').classList.contains('hidden') && document.getElementById('accessory-editor-modal').classList.contains('hidden')) { 
-                    window.openPauseMenu();
-                }
-            } else {
-                document.getElementById('interact-banner').classList.add('hidden');
-            }
-        });
-
-        window.enterInteractMode = function() {
-            isInteracting = true;
-            unlockPointer();
-            document.getElementById('interact-banner').classList.remove('hidden');
-        };
-        window.exitInteractMode = function() {
-            isInteracting = false;
-            document.getElementById('interact-banner').classList.add('hidden');
-            if (activeCamera === camera) lockPointer();
-        };
-
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2(0, 0);
-
-        document.addEventListener('mousedown', (e) => {
-            if (e.target.closest('#ui-layer') || e.target.closest('#script-modal') || e.target.closest('#publish-modal') || e.target.closest('#auth-modal') || e.target.closest('#pause-menu') || e.target.closest('#hub') || e.target.closest('#avatar-modal') || e.target.closest('#hub-chat-modal') || e.target.closest('#admin-panel') || e.target.closest('#accessory-editor-modal')) return;
-
-            if (e.button === 2) {
-                isRightMouseDown = true;
-                if (activeCamera === thirdPersonCamera && !isPaused) {
-                    lockPointer();
-                }
-            }
-
-            if (e.button === 0 && isInGame) { 
-                if (activeCamera === camera && !isPointerLocked && !isInteracting) {
-                    lockPointer(); 
-                    return;
-                }
-
-                if (activeCamera === camera) {
-                    mouse.x = 0; mouse.y = 0;
-                } else {
-                    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                }
-
-                raycaster.setFromCamera(mouse, activeCamera);
-                const intersects = raycaster.intersectObjects(objects, false);
-
-                if (!isRagdolled) {
-                    if (intersects.length > 0 && intersects[0].distance <= 40) {
-                        const obj = intersects[0].object;
-                        
-                        if (Object.values(BLOCK_TYPES).find(t => t.id === obj.userData.type)?.isTool && !obj.userData.isPickedUp) {
-                            obj.visible = false;
-                            obj.userData.isPickedUp = true;
-                            inventory.push(obj);
-                            window.updateInventoryHUD();
-                            window.showNotification("Equipped Tool!");
-                            playSound('place');
-                            return;
-                        }
-                        
-                        if (obj.userData.onClick) obj.userData.onClick();
-                    }
-                    
-                    if (equippedToolIndex >= 0 && inventory[equippedToolIndex]) {
-                        const tool = inventory[equippedToolIndex];
-                        if (tool.userData.onUse) tool.userData.onUse();
-                    } else if (equippedToolIndex === -1) {
-                        throwBomb();
-                    }
-                }
-            }
-        });
-
-        document.addEventListener('mouseup', (e) => {
-            if (e.button === 2) {
-                isRightMouseDown = false;
-                if (activeCamera === thirdPersonCamera && isPointerLocked) {
-                    unlockPointer(); 
-                }
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (isPointerLocked) {
-                if (activeCamera === camera || (activeCamera === thirdPersonCamera && isRightMouseDown)) {
-                    cameraYaw -= e.movementX * 0.003;
-                    cameraPitch -= e.movementY * 0.003;
-                    cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
-                }
-            } else if (isRightMouseDown && activeCamera === thirdPersonCamera) {
-                cameraYaw -= e.movementX * 0.003;
-                cameraPitch -= e.movementY * 0.003;
-                cameraPitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, cameraPitch));
-            }
-        });
-
-        document.addEventListener('contextmenu', e => {
-            if(e.target.closest('#acc-3d-viewport')) return;
-            e.preventDefault();
-        });
-
-        let moveFwd = false, moveBwd = false, moveL = false, moveR = false;
-        let canJump = false;
-        let isSprinting = false;
-        let isGrappling = false;
-        let grappleTarget = new THREE.Vector3();
-        
-        const velocity = new THREE.Vector3();
-        let prevTime = performance.now();
-
-        const isTyping = () => {
-            const active = document.activeElement;
-            return active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
-        };
-
-        let secretAdminCode = "";
-        document.addEventListener('keydown', (e) => {
-            if (isTyping()) {
-                if(isChatting && e.code === 'Escape') toggleChat(false);
-                return;
-            }
-
-            secretAdminCode += e.key;
-            if (secretAdminCode.length > 8) secretAdminCode = secretAdminCode.slice(-8);
-            if (secretAdminCode === "07312012") {
-                window.showAdminPanel();
-                secretAdminCode = "";
-            }
-
-            if (isPaused) return;
-
-            if (e.code === 'KeyX' && isInGame) {
-                if (isPointerLocked) window.enterInteractMode();
-                else if (isInteracting) window.exitInteractMode();
-                return;
-            }
-
-            if (!isPointerLocked && activeCamera === camera && !isInteracting) return;
-
-            switch (e.code) {
-                case 'KeyW': moveFwd = true; break;
-                case 'KeyA': moveL = true; break;
-                case 'KeyS': moveBwd = true; break;
-                case 'KeyD': moveR = true; break;
-                case 'Digit1': if (!isRagdolled) window.equipTool(-1); break;
-                case 'Digit2': if (!isRagdolled) window.equipTool(0); break;
-                case 'Digit3': if (!isRagdolled) window.equipTool(1); break;
-                case 'Digit4': if (!isRagdolled) window.equipTool(2); break;
-                case 'Digit5': if (!isRagdolled) window.equipTool(3); break;
-                case 'Space': 
-                    if(canJump && !isRagdolled) { velocity.y = 150; canJump = false; playSound('jump'); }
-                    break;
-                case 'ShiftLeft': 
-                    isSprinting = true;
-                    break;
-                case 'KeyV': 
-                    if (activeCamera === camera) { 
-                        activeCamera = thirdPersonCamera; 
-                        myAvatarMesh.userData.head.visible = true; 
-                        if (isPointerLocked && !isRightMouseDown) unlockPointer(); 
-                    } 
-                    else { 
-                        activeCamera = camera; 
-                        myAvatarMesh.userData.head.visible = false; 
-                        if (!isPointerLocked && !isInteracting) lockPointer(); 
-                    }
-                    break;
-                case 'KeyE': 
-                    if (!isRagdolled && !isGrappling) {
-                        if (activeCamera === camera) { mouse.x = 0; mouse.y = 0; }
-                        raycaster.setFromCamera(mouse, activeCamera);
-                        const hits = raycaster.intersectObjects(objects, false);
-                        if (hits.length > 0 && hits[0].distance < 200) {
-                            isGrappling = true;
-                            grappleTarget.copy(hits[0].point);
-                            grappleLine.visible = true;
-                            velocity.y = Math.max(velocity.y, 50); 
-                            playSound('grapple');
-                        }
-                    }
-                    break;
-                case 'KeyT': case 'Slash': e.preventDefault(); if (isInGame) toggleChat(true); break;
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (isTyping()) return;
-            switch (e.code) {
-                case 'KeyW': moveFwd = false; break;
-                case 'KeyA': moveL = false; break;
-                case 'KeyS': moveBwd = false; break;
-                case 'KeyD': moveR = false; break;
-                case 'ShiftLeft': isSprinting = false; break;
-            }
-        });
-
-        const grappleMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-        const grappleGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-        const grappleLine = new THREE.Line(grappleGeo, grappleMat);
-        scene.add(grappleLine);
-        grappleLine.visible = false;
-
-        function spawnBomb(pos, vel) {
-            const bombGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-            const bombMat = new THREE.MeshLambertMaterial({color: 0x111111});
-            const bomb = new THREE.Mesh(bombGeo, bombMat);
-            bomb.position.copy(pos);
-            bomb.userData.velocity = vel.clone(); 
-            bomb.userData.timer = 2.0; 
-            scene.add(bomb); activeBombs.push(bomb);
-        }
-
-        function throwBomb() {
-            playSound('jump');
-            const startPos = playerObject.position.clone();
-            const throwDir = new THREE.Vector3(0, 0, -1);
-            throwDir.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
-            const bVel = throwDir.multiplyScalar(150).add(velocity); 
-            
-            localBombEvent = {
-                id: Date.now() + Math.random(),
-                px: startPos.x, py: startPos.y, pz: startPos.z,
-                vx: bVel.x, vy: bVel.y, vz: bVel.z
-            };
-            
-            spawnBomb(startPos, bVel);
-            
-            // Immediate sync to reduce latency for other players
-            if (currentUser && db && currentRoomId !== 'hub') {
-                const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
-                setDoc(myRoomRef, { x: startPos.x, y: startPos.y, z: startPos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent }).catch(e=>console.warn(e));
-            }
-        }
 
 
         function triggerExplosion(pos) {
@@ -2341,6 +2180,19 @@
             window.joinRoom(gameId);
             setTimeout(() => { if (activeCamera === camera && !isPaused) lockPointer(); }, 100);
         };
+
+        // --- SECRET ADMIN CODE ---
+        let secretBuffer = "";
+        window.addEventListener('keydown', (e) => {
+            if (e.key && e.key.length === 1 && !isChatting) {
+                secretBuffer += e.key;
+                if (secretBuffer.length > 8) secretBuffer = secretBuffer.slice(-8);
+                if (secretBuffer === "07312012") {
+                    window.showAdminPanel();
+                    secretBuffer = "";
+                }
+            }
+        });
 
         requestAnimationFrame(animate);
 
