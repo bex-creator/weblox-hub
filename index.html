@@ -502,6 +502,149 @@
             TV: { id: 'TV', shape: 'box', colorOverride: 0x222222 }
         };
 
+        // --- FIREBASE INITIALIZATION & AUTH ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCN9lkBMMTaEk8FR4TKgBqcvDkVFtnDUrk",
+            authDomain: "weblox-1f8b0.firebaseapp.com",
+            projectId: "weblox-1f8b0",
+            storageBucket: "weblox-1f8b0.firebasestorage.app",
+            messagingSenderId: "765567900101",
+            appId: "1:765567900101:web:fa03494970c3019f1e93ac",
+            measurementId: "G-D7E2MT985J"
+        };
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch(e) { 
+                console.warn("Auth token mismatch. Falling back to anonymous login.", e); 
+                await signInAnonymously(auth).catch(err => console.error("Anon auth failed", err));
+            }
+        };
+        initAuth();
+
+        let authInitialized = false;
+        onAuthStateChanged(auth, (user) => { 
+            currentUser = user; 
+            if (!authInitialized) {
+                authInitialized = true;
+            }
+            if(user) {
+                window.closeAuthModal();
+                if (!myUsername) myUsername = "User_" + user.uid.substring(0, 6);
+                
+                const usernameEl = document.getElementById('hub-username');
+                if(usernameEl) usernameEl.innerText = myUsername;
+                const avatarUserEl = document.getElementById('avatar-username');
+                if(avatarUserEl) avatarUserEl.value = myUsername;
+                
+                const avatarPrev = document.getElementById('hub-avatar-preview');
+                if(avatarPrev) avatarPrev.style.backgroundColor = '#' + myAvatarColors.head.toString(16).padStart(6, '0');
+                if (window.fetchCommunityGames) window.fetchCommunityGames();
+                if (typeof initMultiplayer === 'function') initMultiplayer();
+                initChat();
+            } else {
+                window.showAuthModal();
+            }
+        });
+
+        window.loginGuest = async () => { await signInAnonymously(auth); };
+        window.loginAccount = async () => {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-password').value;
+            if (e && p) await signInWithEmailAndPassword(auth, e, p).catch(err => window.showNotification("Login Failed: " + err.message));
+        };
+        window.registerAccount = async () => {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-password').value;
+            if (e && p) await createUserWithEmailAndPassword(auth, e, p).catch(err => window.showNotification("Registration Failed: " + err.message));
+        };
+
+        // --- GLOBAL CHAT LOGIC ---
+        function initChat() {
+            if(!currentUser || !db) return;
+            if (chatUnsubscribe) chatUnsubscribe();
+            
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'global_chat');
+            
+            chatUnsubscribe = onSnapshot(chatCol, (snapshot) => {
+                const msgs = [];
+                snapshot.forEach(docSnap => msgs.push({ id: docSnap.id, ...docSnap.data() }));
+                msgs.sort((a, b) => a.timestamp - b.timestamp);
+
+                const chatHtml = msgs.slice(-50).map(m =>
+                    `<div class="chat-msg"><span class="chat-author" style="color: ${m.color || '#4fc3f7'}">${m.username || 'User_' + m.uid.substring(0,6)}:</span> ${m.text}</div>`
+                ).join('');
+
+                const hubChat = document.getElementById('hub-chat-messages');
+                if (hubChat) { hubChat.innerHTML = chatHtml; hubChat.scrollTop = hubChat.scrollHeight; }
+                const gameChat = document.getElementById('chat-messages');
+                if (gameChat) { gameChat.innerHTML = chatHtml; gameChat.scrollTop = gameChat.scrollHeight; }
+            }, (err) => console.error("Chat sync error", err));
+        }
+
+        window.sendHubChat = async function() {
+            const input = document.getElementById('hub-chat-input');
+            const text = input.value.trim();
+            if(!text || !currentUser || !db) return;
+            input.value = '';
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
+                    uid: currentUser.uid,
+                    username: myUsername,
+                    text: text,
+                    timestamp: Date.now(),
+                    color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
+                });
+            } catch(e) { console.error("Chat send error", e); }
+        };
+
+        function toggleChat(show) {
+            const container = document.getElementById('chat-input-container');
+            const input = document.getElementById('chat-input');
+            isChatting = show;
+            if (show) {
+                container.style.display = 'block';
+                if (isPointerLocked) unlockPointer();
+                setTimeout(() => input.focus(), 10);
+            } else {
+                container.style.display = 'none';
+                input.value = '';
+                if (!isPaused && isInGame && activeCamera === camera) lockPointer();
+            }
+        }
+
+        // Add game chat listener
+        setTimeout(() => {
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('keydown', async (e) => {
+                    if(e.key === 'Enter') {
+                        const text = e.target.value.trim();
+                        if(text && currentUser && db) {
+                            try {
+                                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'global_chat'), {
+                                    uid: currentUser.uid,
+                                    username: myUsername,
+                                    text: text,
+                                    timestamp: Date.now(),
+                                    color: '#' + myAvatarColors.head.toString(16).padStart(6, '0')
+                                });
+                            } catch(err) { console.error("Chat error", err); }
+                        }
+                        toggleChat(false);
+                    }
+                });
+            }
+        }, 100);
+
         // --- AUDIO ENGINE ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSound(type) {
