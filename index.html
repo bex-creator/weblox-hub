@@ -1673,9 +1673,21 @@
             
             try {
                 const parsedData = JSON.parse(gameData.data);
-                if (parsedData.blocks) {
-                    parsedData.blocks.forEach(b => {
-                        instantiateBlock(new THREE.Vector3(b.px, b.py, b.pz), b.type, b.color, b.script, b.sx, b.sy, b.sz);
+                // Robust check: Handle both Array format and Object format with .blocks property
+                const blocksArray = Array.isArray(parsedData) ? parsedData : parsedData.blocks;
+                
+                if (blocksArray) {
+                    blocksArray.forEach(b => {
+                        // Resilient property reading in case the studio saves position/scale inside objects
+                        const px = b.px !== undefined ? b.px : (b.position ? b.position.x : 0);
+                        const py = b.py !== undefined ? b.py : (b.position ? b.position.y : 0);
+                        const pz = b.pz !== undefined ? b.pz : (b.position ? b.position.z : 0);
+                        const sx = b.sx !== undefined ? b.sx : (b.scale ? b.scale.x : 1);
+                        const sy = b.sy !== undefined ? b.sy : (b.scale ? b.scale.y : 1);
+                        const sz = b.sz !== undefined ? b.sz : (b.scale ? b.scale.z : 1);
+                        const blockColor = b.colorHex !== undefined ? b.colorHex : b.color;
+                        
+                        instantiateBlock(new THREE.Vector3(px, py, pz), b.type, blockColor, b.script, sx, sy, sz);
                     });
                 }
             } catch(e) { console.error("Error loading game data", e); }
