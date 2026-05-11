@@ -489,24 +489,20 @@
                 try {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        window.showAuthModal();
                     }
                 } catch(e) { 
                     console.warn("Auth token mismatch (expected with custom Firebase config). Showing login modal."); 
+                    window.showAuthModal();
                 }
             };
             initAuth();
 
-            let authInitialized = false;
             onAuthStateChanged(auth, (user) => { 
                 currentUser = user; 
-                if (!authInitialized) {
-                    authInitialized = true;
-                    // If no session exists, prompt them to log in or pick guest
-                    if (!user && !(typeof __initial_auth_token !== 'undefined' && __initial_auth_token)) {
-                        window.showAuthModal();
-                    }
-                }
                 if(user) {
+                    window.closeAuthModal();
                     const usernameEl = document.getElementById('hub-username');
                     if(usernameEl) usernameEl.innerText = "User_" + user.uid.substring(0, 6);
                     const avatarPrev = document.getElementById('hub-avatar-preview');
@@ -514,6 +510,9 @@
                     if (window.fetchCommunityGames) window.fetchCommunityGames();
                     initMultiplayer();
                     initChat();
+                } else {
+                    const list = document.getElementById('community-games-list');
+                    if(list) list.innerHTML = '<div class="text-gray-500 w-full py-20 flex flex-col items-center gap-4"><div class="text-6xl opacity-30 drop-shadow-lg mb-2">🔒</div><p class="font-bold text-xl text-gray-400">Please sign in to view experiences.</p></div>';
                 }
             });
         } catch(e) { console.error("Firebase init failed:", e); }
@@ -1193,11 +1192,17 @@
         animate();
 
         window.fetchCommunityGames = async () => {
-            if(!currentUser || !db) return;
+            const list = document.getElementById('community-games-list'); 
+            if(!currentUser || !db) {
+                if(list) list.innerHTML = '<div class="text-gray-500 w-full py-20 flex flex-col items-center gap-4"><div class="text-6xl opacity-30 drop-shadow-lg mb-2">🔒</div><p class="font-bold text-xl text-gray-400">Please sign in to view experiences.</p></div>';
+                return;
+            }
+            if(list) list.innerHTML = '<div class="text-gray-500 w-full py-20 flex flex-col items-center gap-5"><div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div><p class="font-medium text-lg text-gray-300">Connecting to Weblox Cloud...</p></div>';
+            
             try {
                 const gamesRef = collection(db, 'artifacts', appId, 'public', 'data', 'games');
                 const snapshot = await getDocs(gamesRef);
-                const list = document.getElementById('community-games-list'); list.innerHTML = '';
+                list.innerHTML = '';
                 if(snapshot.empty) { list.innerHTML = '<div class="text-gray-500 w-full py-20 flex flex-col items-center gap-4"><div class="text-6xl opacity-30 drop-shadow-lg mb-2">🎮</div><p class="font-bold text-xl text-gray-400">No experiences found. Create one in Studio!</p></div>'; return; }
                 
                 snapshot.forEach(docSnap => {
@@ -1259,14 +1264,14 @@
                     };
                     list.appendChild(btn);
                 });
-            } catch(e) { console.error("Fetch error", e); }
+            } catch(e) { 
+                console.error("Fetch error", e); 
+                const list = document.getElementById('community-games-list');
+                if(list) list.innerHTML = `<div class="text-red-500 w-full py-20 flex flex-col items-center gap-4"><div class="text-6xl opacity-30 drop-shadow-lg mb-2">⚠️</div><p class="font-bold text-xl text-red-400">Connection failed.</p><p class="text-sm text-gray-500 text-center max-w-md">${e.message}<br><br>Make sure your Firestore Rules are set to allow read/write in the Firebase Console!</p></div>`;
+            }
         };
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            thirdPersonCamera.aspect = window.innerWidth / window.innerHeight; thirdPersonCamera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            cssRenderer.setSize(window.innerWidth, window.innerHeight);
+        window.showAvatarModal = () => { document.getElementById('avatar-modal').classList.replace('hidden', 'flex'); };
         });
 
         animate();
