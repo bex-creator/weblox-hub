@@ -394,10 +394,10 @@
         <div class="glass-panel p-8 rounded-3xl text-sm text-left grid grid-cols-2 gap-x-16 gap-y-4 shadow-2xl text-gray-300 font-medium">
             <div class="col-span-2 text-center text-white font-black border-b border-white/10 pb-4 mb-2 tracking-widest text-xs uppercase opacity-70">Controls</div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">W A S D</b> <span>Move</span></div>
-            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">Mouse</b> <span>Look</span></div>
-            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">Space</b> <span>Jump</span></div>
-            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">L-Click</b> <span>Use Tool</span></div>
-            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">1, 2, 3</b> <span>Equip Tool</span></div>
+            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">Mouse / R-Stick</b> <span>Look</span></div>
+            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">Space / A Btn</b> <span>Jump</span></div>
+            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">L-Click / R-Trig</b> <span>Use Tool</span></div>
+            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">🎮 Gamepad</b> <span>Supported!</span></div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">X</b> <span>TV Mode</span></div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">C</b> <span>Recenter ESP32</span></div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">T / Enter</b> <span>Chat</span></div>
@@ -1384,6 +1384,7 @@
         let isVRControllerAttached = false;
         let vrRemoteArmQuat = new THREE.Quaternion();
         let vrRemoteYawOffset = 0;
+        let vrRemotePitchOffset = 0;
         let stereoEffect, deviceControls;
         let currentGameId = 'hub';
         let currentGameData = null;
@@ -2049,12 +2050,49 @@
                 camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
             }
 
-            // Movement Reading Logic
-            if (!isRagdolled && isPointerLocked) { 
-                if (moveFwd) velocity.z -= (isSprinting ? 600.0 : 350.0) * delta;
-                if (moveBwd) velocity.z += (isSprinting ? 600.0 : 350.0) * delta;
-                if (moveL) velocity.x -= (isSprinting ? 600.0 : 350.0) * delta;
-                if (moveR) velocity.x += (isSprinting ? 600.0 : 350.0) * delta;
+            // Movement Reading Logic (Keyboard + Gamepad)
+            let gpFwd = 0, gpSide = 0;
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            const gp = gamepads.find(g => g !== null);
+            
+            if (gp && !isRagdolled && isInGame && !isPaused) {
+                // Analog Sticks
+                if (Math.abs(gp.axes[1]) > 0.15) gpFwd = gp.axes[1];
+                if (Math.abs(gp.axes[0]) > 0.15) gpSide = gp.axes[0];
+                
+                if (Math.abs(gp.axes[2]) > 0.15) cameraYaw -= gp.axes[2] * 0.04;
+                if (Math.abs(gp.axes[3]) > 0.15) {
+                    cameraPitch -= gp.axes[3] * 0.04;
+                    cameraPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraPitch));
+                }
+
+                // Buttons
+                if (gp.buttons[0].pressed && canJump) { velocity.y = 350; canJump = false; playSound('jump'); }
+                
+                if (gp.buttons[7].pressed || gp.buttons[5].pressed) {
+                    if (!window.gpTriggerPressed && equippedToolIndex === -1 && !isGrappling) {
+                        window.gpTriggerPressed = true;
+                        playSound('place');
+                        const bomb = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshLambertMaterial({color: 0x222222}));
+                        bomb.position.copy(playerObject.position);
+                        const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
+                        bomb.userData = { velocity: dir.multiplyScalar(400).add(new THREE.Vector3(0, 50, 0)), timer: 3.0 };
+                        scene.add(bomb);
+                        activeBombs.push(bomb);
+                        localBombEvent = { id: Date.now(), px: bomb.position.x, py: bomb.position.y, pz: bomb.position.z, vx: bomb.userData.velocity.x, vy: bomb.userData.velocity.y, vz: bomb.userData.velocity.z };
+                    }
+                } else { window.gpTriggerPressed = false; }
+            }
+
+            if (!isRagdolled && (isPointerLocked || gp)) { 
+                const speed = isSprinting ? 600.0 : 350.0;
+                if (moveFwd) velocity.z -= speed * delta;
+                if (moveBwd) velocity.z += speed * delta;
+                if (moveL) velocity.x -= speed * delta;
+                if (moveR) velocity.x += speed * delta;
+                
+                if (gpFwd !== 0) velocity.z += gpFwd * speed * delta;
+                if (gpSide !== 0) velocity.x += gpSide * speed * delta;
             }
 
             const xMovementDist = Math.abs(velocity.x * delta);
@@ -2172,10 +2210,23 @@
                 if(stereoEffect) stereoEffect.render(scene, camera);
             } else {
                 if (activeCamera === camera && isVRAttached) {
-                    camera.quaternion.slerp(vrRemoteQuat, 0.1);
-                    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-                    cameraYaw = euler.y;
-                    cameraPitch = euler.x;
+                    const phoneEuler = new THREE.Euler().setFromQuaternion(vrRemoteQuat, 'YXZ');
+                    
+                    let relYaw = phoneEuler.y - vrRemoteYawOffset;
+                    let relPitch = phoneEuler.x - vrRemotePitchOffset;
+
+                    if (!window.smoothVrYaw) window.smoothVrYaw = 0;
+                    if (!window.smoothVrPitch) window.smoothVrPitch = 0;
+                    
+                    while (relYaw - window.smoothVrYaw < -Math.PI) relYaw += Math.PI * 2;
+                    while (relYaw - window.smoothVrYaw > Math.PI) relYaw -= Math.PI * 2;
+
+                    window.smoothVrYaw += (relYaw - window.smoothVrYaw) * 0.3;
+                    window.smoothVrPitch += (relPitch - window.smoothVrPitch) * 0.3;
+
+                    let finalPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraPitch + window.smoothVrPitch));
+                    
+                    camera.rotation.set(finalPitch, cameraYaw + window.smoothVrYaw, 0, 'YXZ');
                 } else if (activeCamera === camera) {
                     camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
                 }
@@ -2536,6 +2587,8 @@
                             }
                         } else {
                             vrRemoteQuat.set(data.phoneQuat.x, data.phoneQuat.y, data.phoneQuat.z, data.phoneQuat.w);
+                            vrRemoteYawOffset = data.yawOffset || 0;
+                            vrRemotePitchOffset = data.pitchOffset || 0;
                             if (!isVRAttached) {
                                 isVRAttached = true;
                                 window.showNotification("Phone VR Headset Connected!");
@@ -2609,6 +2662,19 @@
                             document.getElementById('game-hud').style.display = 'none';
                             stereoEffect = new StereoEffect(renderer);
                             stereoEffect.setSize(window.innerWidth, window.innerHeight);
+
+                            const recenterBtn = document.createElement('div');
+                            recenterBtn.innerHTML = "🎯 Recenter View";
+                            recenterBtn.className = "absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 px-6 py-3 rounded-full text-white font-bold z-[9999] shadow-xl";
+                            recenterBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                const e2 = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+                                window.phoneYawOffset = e2.y;
+                                window.phonePitchOffset = e2.x;
+                                recenterBtn.innerText = "✅ Recentered!";
+                                setTimeout(() => recenterBtn.innerText = "🎯 Recenter View", 1500);
+                            };
+                            document.body.appendChild(recenterBtn);
                         } else {
                             document.getElementById('hub').style.display = 'none';
                             document.getElementById('game-hud').style.display = 'none';
@@ -2693,7 +2759,8 @@
                             updateDoc(clientRef, {
                                 mode: mode,
                                 phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w },
-                                yawOffset: window.phoneYawOffset || 0
+                                yawOffset: window.phoneYawOffset || 0,
+                                pitchOffset: window.phonePitchOffset || 0
                             }).catch(e=>{});
                         }, 80);
                     };
