@@ -1903,26 +1903,41 @@
                 if (meshGroup === myAvatarMesh) {
                     if (isVRControllerAttached) {
                         const euler = new THREE.Euler().setFromQuaternion(vrRemoteArmQuat, 'YXZ');
-                        meshGroup.userData.limbs[1].rotation.x = euler.x;
-                        meshGroup.userData.limbs[1].rotation.y = euler.y;
-                        meshGroup.userData.limbs[1].rotation.z = euler.z;
-                        customRightArmX = euler.x;
-                        customRightArmY = euler.y;
-                        customRightArmZ = euler.z;
+                        
+                        // Fix the "Weird Gyro" by making the phone's yaw relative to the avatar's body direction
+                        let localYaw = euler.y - cameraYaw;
+                        while (localYaw < -Math.PI) localYaw += Math.PI * 2;
+                        while (localYaw > Math.PI) localYaw -= Math.PI * 2;
+
+                        // Fix "Lag" by using Smooth Interpolation (Lerp) to glide between network updates
+                        const lerpSpeed = 15 * delta;
+                        meshGroup.userData.limbs[1].rotation.x += (euler.x - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
+                        meshGroup.userData.limbs[1].rotation.y += (localYaw - meshGroup.userData.limbs[1].rotation.y) * lerpSpeed;
+                        meshGroup.userData.limbs[1].rotation.z += (euler.z - meshGroup.userData.limbs[1].rotation.z) * lerpSpeed;
+
+                        customRightArmX = meshGroup.userData.limbs[1].rotation.x;
+                        customRightArmY = meshGroup.userData.limbs[1].rotation.y;
+                        customRightArmZ = meshGroup.userData.limbs[1].rotation.z;
                     } else if (customRightArmX !== null || customRightArmY !== null || customRightArmZ !== null) {
-                        if (customRightArmX !== null) meshGroup.userData.limbs[1].rotation.x = customRightArmX;
-                        if (customRightArmY !== null) meshGroup.userData.limbs[1].rotation.y = customRightArmY;
-                        if (customRightArmZ !== null) meshGroup.userData.limbs[1].rotation.z = customRightArmZ;
+                        const lerpSpeed = 15 * delta;
+                        if (customRightArmX !== null) meshGroup.userData.limbs[1].rotation.x += (customRightArmX - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
+                        if (customRightArmY !== null) meshGroup.userData.limbs[1].rotation.y += (customRightArmY - meshGroup.userData.limbs[1].rotation.y) * lerpSpeed;
+                        if (customRightArmZ !== null) meshGroup.userData.limbs[1].rotation.z += (customRightArmZ - meshGroup.userData.limbs[1].rotation.z) * lerpSpeed;
                     }
                 } else {
+                    // Smoothly animate the arm for other players watching you
+                    const lerpSpeed = 15 * delta;
                     if (meshGroup.userData.customRightArmX !== undefined && meshGroup.userData.customRightArmX !== null) {
-                        meshGroup.userData.limbs[1].rotation.x = meshGroup.userData.customRightArmX;
+                        meshGroup.userData.limbs[1].rotation.x += (meshGroup.userData.customRightArmX - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
                     }
                     if (meshGroup.userData.customRightArmY !== undefined && meshGroup.userData.customRightArmY !== null) {
-                        meshGroup.userData.limbs[1].rotation.y = meshGroup.userData.customRightArmY;
+                        let diff = meshGroup.userData.customRightArmY - meshGroup.userData.limbs[1].rotation.y;
+                        while(diff < -Math.PI) diff += Math.PI * 2;
+                        while(diff > Math.PI) diff -= Math.PI * 2;
+                        meshGroup.userData.limbs[1].rotation.y += diff * lerpSpeed;
                     }
                     if (meshGroup.userData.customRightArmZ !== undefined && meshGroup.userData.customRightArmZ !== null) {
-                        meshGroup.userData.limbs[1].rotation.z = meshGroup.userData.customRightArmZ;
+                        meshGroup.userData.limbs[1].rotation.z += (meshGroup.userData.customRightArmZ - meshGroup.userData.limbs[1].rotation.z) * lerpSpeed;
                     }
                 }
             }
@@ -2624,7 +2639,7 @@
                                 mode: mode,
                                 phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w }
                             }).catch(e=>{});
-                        }, 100);
+                        }, 80);
                     };
                 } else {
                     window.showNotification("Invalid Code! Host a game on your PC first.");
