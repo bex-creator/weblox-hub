@@ -1954,7 +1954,7 @@
                     }
                 } else {
                     // Smoothly animate the arm for other players watching you
-                    const lerpSpeed = 15 * delta;
+                    const lerpSpeed = 8 * delta;
                     if (meshGroup.userData.customRightArmX !== undefined && meshGroup.userData.customRightArmX !== null) {
                         meshGroup.userData.limbs[1].rotation.x += (meshGroup.userData.customRightArmX - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
                     }
@@ -1996,12 +1996,12 @@
             for(let id in otherPlayers) {
                 const p = otherPlayers[id];
                 const oldPos = p.position.clone();
-                p.position.lerp(p.userData.targetPos, 15 * delta);
+                p.position.lerp(p.userData.targetPos, 8 * delta);
                 
                 let diff = p.userData.targetRot - p.rotation.y;
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                p.rotation.y += diff * 15 * delta;
+                p.rotation.y += diff * 8 * delta;
                 
                 const distMoved = Math.sqrt(Math.pow(p.position.x - oldPos.x, 2) + Math.pow(p.position.z - oldPos.z, 2));
                 const remoteWalkSpeed = distMoved / delta;
@@ -2215,7 +2215,13 @@
                 }
                 if(isVRRemoteClient) playerObject.position.lerp(vrHostPosTarget, 0.1);
                 camera.position.copy(playerObject.position);
-                if(stereoEffect) stereoEffect.render(scene, camera);
+                
+                // Toggle between Stereo and Mono rendering based on user choice
+                if (window.isVRMonoMode) {
+                    renderer.render(scene, camera);
+                } else if(stereoEffect) {
+                    stereoEffect.render(scene, camera);
+                }
             } else {
                 if (activeCamera === camera && isVRAttached) {
                     const phoneEuler = new THREE.Euler().setFromQuaternion(vrRemoteQuat, 'YXZ');
@@ -2367,18 +2373,29 @@
                 }, (err) => console.warn("Presence sync error", err));
             } catch(e) {}
 
-            // High Frequency Room Sync
+            // High Frequency Room Sync (Throttled for Firestore Quotas)
             setInterval(async () => {
                 if(!currentUser || !db) return;
                 const pos = playerObject.position;
-                if (pos.distanceTo(lastSyncPos) > 0.5 || Math.random() < 0.1 || customRightArmX !== null) {
+                
+                // Only send if significant movement, rotation, or action occurred
+                const moved = pos.distanceTo(lastSyncPos) > 0.5;
+                const rotated = Math.abs(cameraYaw - (window.lastSyncYaw || 0)) > 0.1;
+                const armMoved = customRightArmX !== window.lastSyncArmX;
+                const bombDropped = localBombEvent !== window.lastSyncBomb;
+                
+                if (moved || rotated || armMoved || bombDropped) {
                     lastSyncPos.copy(pos);
+                    window.lastSyncYaw = cameraYaw;
+                    window.lastSyncArmX = customRightArmX;
+                    window.lastSyncBomb = localBombEvent;
+                    
                     try {
                         const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
                         await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent, rarmX: customRightArmX, rarmY: customRightArmY, rarmZ: customRightArmZ });
                     } catch(e) {} 
                 }
-            }, 150);
+            }, 1000);
 
             // Low Frequency Global Presence Sync
             setInterval(async () => {
@@ -2387,7 +2404,7 @@
                     const myPresRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
                     await setDoc(myPresRef, { gameId: currentRoomId, time: Date.now(), avatar: myAvatarColors, username: myUsername });
                 } catch(e) {} 
-            }, 2000);
+            }, 20000);
 
             setInterval(() => {
                 const now = Date.now();
@@ -2616,11 +2633,15 @@
             if(vrHostSyncInterval) clearInterval(vrHostSyncInterval);
             vrHostSyncInterval = setInterval(() => {
                 if(isInGame) {
-                    updateDoc(hostRef, {
-                        hostPos: {x: playerObject.position.x, y: playerObject.position.y, z: playerObject.position.z}
-                    }).catch(e=>{});
+                    const hp = playerObject.position;
+                    if (!window.lastHostPos || window.lastHostPos.distanceTo(hp) > 0.5) {
+                        window.lastHostPos = hp.clone();
+                        updateDoc(hostRef, {
+                            hostPos: {x: hp.x, y: hp.y, z: hp.z}
+                        }).catch(e=>{});
+                    }
                 }
-            }, 250);
+            }, 500);
         };
 
         window.showVRClientModal = () => { document.getElementById('vr-client-modal').classList.replace('hidden', 'flex'); }
@@ -2679,23 +2700,48 @@
                             }
                             isVRHeadsetMode = true;
                             isVRRemoteClient = true;
+                            window.isVRMonoMode = false;
                             document.getElementById('hub').style.display = 'none';
                             document.getElementById('game-hud').style.display = 'none';
                             stereoEffect = new StereoEffect(renderer);
                             stereoEffect.setSize(window.innerWidth, window.innerHeight);
 
-                            const recenterBtn = document.createElement('div');
-                            recenterBtn.innerHTML = "🎯 Recenter View";
-                            recenterBtn.className = "absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 px-6 py-3 rounded-full text-white font-bold z-[9999] shadow-xl";
+                            // Create a container for the VR Headset controls
+                            const vrControlsContainer = document.createElement('div');
+                            vrControlsContainer.className = "absolute bottom-10 left-1/2 transform -translate-x-1/2 flex gap-4 z-[9999]";
+
+                            const recenterBtn = document.createElement('button');
+                            recenterBtn.innerHTML = "🎯 Recenter";
+                            recenterBtn.className = "bg-white/20 backdrop-blur-md border border-white/30 px-6 py-3 rounded-full text-white font-bold shadow-xl whitespace-nowrap active:scale-95 transition-transform";
                             recenterBtn.onclick = (e) => {
                                 e.stopPropagation();
                                 const e2 = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
                                 window.phoneYawOffset = e2.y;
                                 window.phonePitchOffset = e2.x;
-                                recenterBtn.innerText = "✅ Recentered!";
-                                setTimeout(() => recenterBtn.innerText = "🎯 Recenter View", 1500);
+                                recenterBtn.innerText = "✅ Done!";
+                                setTimeout(() => recenterBtn.innerText = "🎯 Recenter", 1500);
                             };
-                            document.body.appendChild(recenterBtn);
+
+                            const monoBtn = document.createElement('button');
+                            monoBtn.innerHTML = "👁️ Single Screen";
+                            monoBtn.className = "bg-white/20 backdrop-blur-md border border-white/30 px-6 py-3 rounded-full text-white font-bold shadow-xl whitespace-nowrap active:scale-95 transition-transform";
+                            monoBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                window.isVRMonoMode = !window.isVRMonoMode;
+                                if (window.isVRMonoMode) {
+                                    monoBtn.innerHTML = "🥽 Split Screen";
+                                    renderer.setSize(window.innerWidth, window.innerHeight);
+                                    camera.aspect = window.innerWidth / window.innerHeight;
+                                    camera.updateProjectionMatrix();
+                                } else {
+                                    monoBtn.innerHTML = "👁️ Single Screen";
+                                    stereoEffect.setSize(window.innerWidth, window.innerHeight);
+                                }
+                            };
+
+                            vrControlsContainer.appendChild(recenterBtn);
+                            vrControlsContainer.appendChild(monoBtn);
+                            document.body.appendChild(vrControlsContainer);
                         } else {
                             document.getElementById('hub').style.display = 'none';
                             document.getElementById('game-hud').style.display = 'none';
@@ -2782,13 +2828,19 @@
                         });
 
                         setInterval(() => {
-                            updateDoc(clientRef, {
-                                mode: mode,
-                                phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w },
-                                yawOffset: window.phoneYawOffset || 0,
-                                pitchOffset: window.phonePitchOffset || 0
-                            }).catch(e=>{});
-                        }, 80);
+                            const newQuat = camera.quaternion;
+                            // Only update if quat changed significantly to save quota
+                            const diff = window.lastVRQuat ? newQuat.angleTo(window.lastVRQuat) : 1;
+                            if (diff > 0.02) {
+                                window.lastVRQuat = newQuat.clone();
+                                updateDoc(clientRef, {
+                                    mode: mode,
+                                    phoneQuat: { x: newQuat.x, y: newQuat.y, z: newQuat.z, w: newQuat.w },
+                                    yawOffset: window.phoneYawOffset || 0,
+                                    pitchOffset: window.phonePitchOffset || 0
+                                }).catch(e=>{});
+                            }
+                        }, 250);
                     };
                 } else {
                     window.showNotification("Invalid Code! Host a game on your PC first.");
