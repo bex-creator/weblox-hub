@@ -2210,8 +2210,13 @@
             if (isVRHeadsetMode) {
                 if(deviceControls) {
                     deviceControls.update();
-                    // Advanced Gyro Smoothing: Glide the real camera toward the raw sensor data to eliminate phone hardware jitter
-                    camera.quaternion.slerp(window.vrDummyCam.quaternion, 0.4);
+                    // Advanced Gyro Smoothing + Local Recentering Offset
+                    const dummyEuler = new THREE.Euler().setFromQuaternion(window.vrDummyCam.quaternion, 'YXZ');
+                    dummyEuler.y -= (window.phoneYawOffset || 0);
+                    dummyEuler.x -= (window.phonePitchOffset || 0);
+                    const targetQuat = new THREE.Quaternion().setFromEuler(dummyEuler);
+                    
+                    camera.quaternion.slerp(targetQuat, 0.4);
                 }
                 if(isVRRemoteClient) playerObject.position.lerp(vrHostPosTarget, 0.1);
                 camera.position.copy(playerObject.position);
@@ -2487,8 +2492,48 @@
                 startBtn.remove();
                 
                 isVRHeadsetMode = true;
+                window.isVRMonoMode = false;
                 document.getElementById('game-hud').style.display = 'none'; // Hide HUD to fully immerse
                 
+                // --- VR CONTROLS (Recenter + Single Screen) ---
+                const vrControlsContainer = document.createElement('div');
+                vrControlsContainer.className = "absolute bottom-10 left-1/2 transform -translate-x-1/2 flex gap-4 z-[9999]";
+
+                const recenterBtn = document.createElement('button');
+                recenterBtn.innerHTML = "🎯 Recenter";
+                recenterBtn.className = "bg-white/20 backdrop-blur-md border border-white/30 px-6 py-3 rounded-full text-white font-bold shadow-xl whitespace-nowrap active:scale-95 transition-transform";
+                recenterBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if(window.vrDummyCam) {
+                        const e2 = new THREE.Euler().setFromQuaternion(window.vrDummyCam.quaternion, 'YXZ');
+                        window.phoneYawOffset = e2.y;
+                        window.phonePitchOffset = e2.x;
+                    }
+                    recenterBtn.innerText = "✅ Done!";
+                    setTimeout(() => recenterBtn.innerText = "🎯 Recenter", 1500);
+                };
+
+                const monoBtn = document.createElement('button');
+                monoBtn.innerHTML = "👁️ Single Screen";
+                monoBtn.className = "bg-white/20 backdrop-blur-md border border-white/30 px-6 py-3 rounded-full text-white font-bold shadow-xl whitespace-nowrap active:scale-95 transition-transform";
+                monoBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    window.isVRMonoMode = !window.isVRMonoMode;
+                    if (window.isVRMonoMode) {
+                        monoBtn.innerHTML = "🥽 Split Screen";
+                        renderer.setSize(window.innerWidth, window.innerHeight);
+                        camera.aspect = window.innerWidth / window.innerHeight;
+                        camera.updateProjectionMatrix();
+                    } else {
+                        monoBtn.innerHTML = "👁️ Single Screen";
+                        stereoEffect.setSize(window.innerWidth, window.innerHeight);
+                    }
+                };
+
+                vrControlsContainer.appendChild(recenterBtn);
+                vrControlsContainer.appendChild(monoBtn);
+                document.body.appendChild(vrControlsContainer);
+
                 const exitBtn = document.createElement('div');
                 exitBtn.innerHTML = "✕";
                 exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl shadow-lg";
@@ -2715,9 +2760,11 @@
                             recenterBtn.className = "bg-white/20 backdrop-blur-md border border-white/30 px-6 py-3 rounded-full text-white font-bold shadow-xl whitespace-nowrap active:scale-95 transition-transform";
                             recenterBtn.onclick = (e) => {
                                 e.stopPropagation();
-                                const e2 = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-                                window.phoneYawOffset = e2.y;
-                                window.phonePitchOffset = e2.x;
+                                if(window.vrDummyCam) {
+                                    const e2 = new THREE.Euler().setFromQuaternion(window.vrDummyCam.quaternion, 'YXZ');
+                                    window.phoneYawOffset = e2.y;
+                                    window.phonePitchOffset = e2.x;
+                                }
                                 recenterBtn.innerText = "✅ Done!";
                                 setTimeout(() => recenterBtn.innerText = "🎯 Recenter", 1500);
                             };
@@ -2758,8 +2805,10 @@
                             window.phoneYawOffset = 0;
                             document.getElementById('vr-recenter-btn').onclick = (e) => {
                                 e.stopPropagation();
-                                const e2 = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-                                window.phoneYawOffset = e2.y;
+                                if(window.vrDummyCam) {
+                                    const e2 = new THREE.Euler().setFromQuaternion(window.vrDummyCam.quaternion, 'YXZ');
+                                    window.phoneYawOffset = e2.y;
+                                }
                                 
                                 const btn = document.getElementById('vr-recenter-btn');
                                 btn.innerText = "✅ Recentered!";
@@ -2836,8 +2885,8 @@
                                 updateDoc(clientRef, {
                                     mode: mode,
                                     phoneQuat: { x: newQuat.x, y: newQuat.y, z: newQuat.z, w: newQuat.w },
-                                    yawOffset: window.phoneYawOffset || 0,
-                                    pitchOffset: window.phonePitchOffset || 0
+                                    yawOffset: 0,   // Baked into the quaternion now
+                                    pitchOffset: 0  // Baked into the quaternion now
                                 }).catch(e=>{});
                             }
                         }, 250);
