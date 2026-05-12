@@ -1391,6 +1391,10 @@
         let vrHostSyncInterval = null;
         let vrHostPosTarget = new THREE.Vector3();
 
+        // VR Smoothing & Mobile Wake Lock
+        window.vrDummyCam = new THREE.PerspectiveCamera();
+        let wakeLock = null;
+
         const grappleGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
         const grappleMat = new THREE.LineBasicMaterial({color: 0xff0000});
         const grappleLine = new THREE.Line(grappleGeo, grappleMat);
@@ -2204,7 +2208,11 @@
             prevTime = time;
 
             if (isVRHeadsetMode) {
-                if(deviceControls) deviceControls.update();
+                if(deviceControls) {
+                    deviceControls.update();
+                    // Advanced Gyro Smoothing: Glide the real camera toward the raw sensor data to eliminate phone hardware jitter
+                    camera.quaternion.slerp(window.vrDummyCam.quaternion, 0.4);
+                }
                 if(isVRRemoteClient) playerObject.position.lerp(vrHostPosTarget, 0.1);
                 camera.position.copy(playerObject.position);
                 if(stereoEffect) stereoEffect.render(scene, camera);
@@ -2452,7 +2460,13 @@
                     } catch(e) { console.error(e); gyroEnabled = false; }
                 }
                 
-                try { document.body.requestFullscreen(); } catch(e){}
+                // Maximize Immersion: Request Fullscreen, Lock Landscape, and keep screen awake!
+                try { 
+                    if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); 
+                    if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+                    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+                } catch(e) { console.warn("Some mobile APIs blocked:", e); }
+                
                 startBtn.remove();
                 
                 isVRHeadsetMode = true;
@@ -2469,7 +2483,8 @@
 
                 if (gyroEnabled) {
                     try {
-                        deviceControls = new DeviceOrientationControls(camera);
+                        // Apply to dummy cam so we can smooth the data in the render loop
+                        deviceControls = new DeviceOrientationControls(window.vrDummyCam);
                     } catch (e) { gyroEnabled = false; }
                 }
                 
@@ -2649,7 +2664,13 @@
                             } catch(e) { console.error(e); gyroEnabled = false; }
                         }
                         
-                        try { document.body.requestFullscreen(); } catch(e){}
+                        // Maximize Immersion: Request Fullscreen, Lock Landscape/Portrait, and keep screen awake!
+                        try { 
+                            if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); 
+                            if (mode === 'headset' && screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+                            if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+                        } catch(e) { console.warn("Some mobile APIs blocked:", e); }
+
                         startBtn.remove();
                         
                         if (mode === 'headset') {
@@ -2718,13 +2739,18 @@
                         const exitBtn = document.createElement('div');
                         exitBtn.innerHTML = "✕";
                         exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl shadow-lg";
-                        exitBtn.onclick = () => window.location.reload();
+                        exitBtn.onclick = () => {
+                            if (wakeLock) wakeLock.release();
+                            if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+                            window.location.reload();
+                        };
                         document.body.appendChild(exitBtn);
 
                         // Fallback: Touch to look if Gyroscope is blocked
                         if (gyroEnabled) {
                             try {
-                                deviceControls = new DeviceOrientationControls(camera);
+                                // Apply to dummy cam so we can smooth the data in the render loop
+                                deviceControls = new DeviceOrientationControls(window.vrDummyCam);
                             } catch (e) { gyroEnabled = false; }
                         }
                         
