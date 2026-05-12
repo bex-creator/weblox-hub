@@ -1341,6 +1341,99 @@
 
         const controls = new PointerLockControls(camera, document.body);
         
+        // --- PHYSICS & MOVEMENT GLOBALS ---
+        let prevTime = performance.now();
+        let velocity = new THREE.Vector3();
+        let moveFwd = false, moveBwd = false, moveL = false, moveR = false;
+        let canJump = false, isSprinting = false, isPointerLocked = false;
+        let isGrappling = false;
+        let grappleTarget = new THREE.Vector3();
+        
+        const grappleGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        const grappleMat = new THREE.LineBasicMaterial({color: 0xff0000});
+        const grappleLine = new THREE.Line(grappleGeo, grappleMat);
+        grappleLine.visible = false;
+        scene.add(grappleLine);
+
+        window.lockPointer = () => { if(controls && !isPaused && isInGame) controls.lock(); };
+        window.unlockPointer = () => { if(controls) controls.unlock(); };
+
+        controls.addEventListener('lock', () => { isPointerLocked = true; document.getElementById('crosshair').style.display = 'block'; });
+        controls.addEventListener('unlock', () => { 
+            isPointerLocked = false; 
+            document.getElementById('crosshair').style.display = 'none';
+            moveFwd = false; moveBwd = false; moveL = false; moveR = false;
+            if(isInGame && !isPaused && !isChatting) window.openPauseMenu(); 
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if(isChatting || isAccEditorOpen || document.activeElement.tagName === 'INPUT') return;
+            switch(e.code) {
+                case 'KeyW': moveFwd = true; break;
+                case 'KeyA': moveL = true; break;
+                case 'KeyS': moveBwd = true; break;
+                case 'KeyD': moveR = true; break;
+                case 'Space': if(canJump) { velocity.y = 350; canJump = false; playSound('jump'); } break;
+                case 'ShiftLeft': isSprinting = true; break;
+                case 'Digit1': window.equipTool(-1); break;
+                case 'Digit2': window.equipTool(0); break;
+                case 'Digit3': window.equipTool(1); break;
+                case 'Digit4': window.equipTool(2); break;
+                case 'KeyT': toggleChat(true); e.preventDefault(); break;
+                case 'KeyX': if(isPointerLocked) unlockPointer(); else lockPointer(); break;
+                case 'KeyV': 
+                    activeCamera = (activeCamera === camera) ? thirdPersonCamera : camera; 
+                    myAvatarMesh.userData.head.visible = (activeCamera === thirdPersonCamera);
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if(isChatting || isAccEditorOpen || document.activeElement.tagName === 'INPUT') return;
+            switch(e.code) {
+                case 'KeyW': moveFwd = false; break;
+                case 'KeyA': moveL = false; break;
+                case 'KeyS': moveBwd = false; break;
+                case 'KeyD': moveR = false; break;
+                case 'ShiftLeft': isSprinting = false; break;
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if(isAccEditorOpen) return;
+            if(e.button === 2) isRightMouseDown = true;
+            if(e.button === 0 && isPointerLocked) {
+                if(equippedToolIndex === -1 && !isGrappling) {
+                    playSound('place');
+                    const bomb = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), new THREE.MeshLambertMaterial({color: 0x222222}));
+                    bomb.position.copy(playerObject.position);
+                    const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
+                    bomb.userData = { velocity: dir.multiplyScalar(400).add(new THREE.Vector3(0, 50, 0)), timer: 3.0 };
+                    scene.add(bomb);
+                    activeBombs.push(bomb);
+                    localBombEvent = { id: Date.now(), px: bomb.position.x, py: bomb.position.y, pz: bomb.position.z, vx: bomb.userData.velocity.x, vy: bomb.userData.velocity.y, vz: bomb.userData.velocity.z };
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if(e.button === 2) isRightMouseDown = false;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isPointerLocked) {
+                if(isRightMouseDown && activeCamera === thirdPersonCamera && !isAccEditorOpen) {
+                    cameraYaw -= e.movementX * 0.002;
+                    cameraPitch -= e.movementY * 0.002;
+                    cameraPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraPitch));
+                }
+                return;
+            }
+            cameraYaw -= e.movementX * 0.002;
+            cameraPitch -= e.movementY * 0.002;
+            cameraPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraPitch));
+        });
+        
         scene.add(new THREE.AmbientLight(0x606060));
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(100, 200, 50);
