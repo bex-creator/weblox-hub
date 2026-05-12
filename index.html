@@ -468,13 +468,14 @@
     <div id="vr-client-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/90 z-[400] text-white pointer-events-auto backdrop-blur-xl">
         <div class="glass-panel p-8 rounded-3xl w-[400px] shadow-2xl border border-white/10 text-center">
             <div class="text-6xl mb-4">🥽</div>
-            <h2 class="text-2xl font-black text-white mb-2">Connect as Headset</h2>
-            <p class="text-sm text-gray-400 mb-6">Enter the 4-digit code shown on your PC screen to use this phone as a VR headset.</p>
+            <h2 class="text-2xl font-black text-white mb-2">Connect Device</h2>
+            <p class="text-sm text-gray-400 mb-6">Enter the 4-digit code shown on your PC screen to use this phone.</p>
             
             <input type="number" id="vr-client-code" placeholder="0000" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 mb-6 text-white text-center text-3xl tracking-widest font-black focus:outline-none focus:border-blue-500 transition-colors" autocomplete="off" max="9999">
             
             <div class="flex flex-col gap-3">
-                <button class="bg-blue-600 hover:bg-blue-500 w-full py-4 rounded-xl font-bold text-sm transition-transform hover:scale-[1.02] shadow-lg shadow-blue-600/20" onclick="window.connectPhoneVR()">Connect & Start VR</button>
+                <button class="bg-blue-600 hover:bg-blue-500 w-full py-3.5 rounded-xl font-bold text-sm transition-transform hover:scale-[1.02] shadow-lg shadow-blue-600/20" onclick="window.connectPhoneVR('headset')">Connect as VR Headset</button>
+                <button class="bg-purple-600 hover:bg-purple-500 w-full py-3.5 rounded-xl font-bold text-sm transition-transform hover:scale-[1.02] shadow-lg shadow-purple-600/20" onclick="window.connectPhoneVR('controller')">Connect as Hand Controller</button>
                 <button class="text-gray-400 hover:text-white font-semibold text-sm transition-colors py-2" onclick="window.closeVRClientModal()">Cancel</button>
             </div>
         </div>
@@ -1379,6 +1380,8 @@
         let isVRAttached = false;
         let isVRRemoteClient = false;
         let vrRemoteQuat = new THREE.Quaternion();
+        let isVRControllerAttached = false;
+        let vrRemoteArmQuat = new THREE.Quaternion();
         let stereoEffect, deviceControls;
         let currentGameId = 'hub';
         let currentGameData = null;
@@ -1896,12 +1899,28 @@
                     meshGroup.userData.joints.forEach(j => j.rotation.x *= 0.8);
                 }
                 
-                // Override Right Arm (limbs[1]) for ESP32 Control
-                if (meshGroup === myAvatarMesh && customRightArmX !== null) {
-                    meshGroup.userData.limbs[1].rotation.x = customRightArmX;
-                    if (customRightArmZ !== null) meshGroup.userData.limbs[1].rotation.z = customRightArmZ;
-                } else if (meshGroup.userData.customRightArmX !== undefined && meshGroup.userData.customRightArmX !== null) {
-                    meshGroup.userData.limbs[1].rotation.x = meshGroup.userData.customRightArmX;
+                // Override Right Arm (limbs[1]) for ESP32 or Phone Controller Control
+                if (meshGroup === myAvatarMesh) {
+                    if (isVRControllerAttached) {
+                        const euler = new THREE.Euler().setFromQuaternion(vrRemoteArmQuat, 'YXZ');
+                        meshGroup.userData.limbs[1].rotation.x = euler.x;
+                        meshGroup.userData.limbs[1].rotation.y = euler.y;
+                        meshGroup.userData.limbs[1].rotation.z = euler.z;
+                        customRightArmX = euler.x;
+                        customRightArmY = euler.y;
+                        customRightArmZ = euler.z;
+                    } else if (customRightArmX !== null || customRightArmY !== null || customRightArmZ !== null) {
+                        if (customRightArmX !== null) meshGroup.userData.limbs[1].rotation.x = customRightArmX;
+                        if (customRightArmY !== null) meshGroup.userData.limbs[1].rotation.y = customRightArmY;
+                        if (customRightArmZ !== null) meshGroup.userData.limbs[1].rotation.z = customRightArmZ;
+                    }
+                } else {
+                    if (meshGroup.userData.customRightArmX !== undefined && meshGroup.userData.customRightArmX !== null) {
+                        meshGroup.userData.limbs[1].rotation.x = meshGroup.userData.customRightArmX;
+                    }
+                    if (meshGroup.userData.customRightArmY !== undefined && meshGroup.userData.customRightArmY !== null) {
+                        meshGroup.userData.limbs[1].rotation.y = meshGroup.userData.customRightArmY;
+                    }
                     if (meshGroup.userData.customRightArmZ !== undefined && meshGroup.userData.customRightArmZ !== null) {
                         meshGroup.userData.limbs[1].rotation.z = meshGroup.userData.customRightArmZ;
                     }
@@ -2170,6 +2189,7 @@
                         player.userData.targetRot = data.ry;
                         player.userData.isJumping = data.jumping || false;
                         player.userData.customRightArmX = data.rarmX;
+                        player.userData.customRightArmY = data.rarmY;
                         player.userData.customRightArmZ = data.rarmZ;
                         player.userData.lastUpdate = Date.now();
                         player.userData.lastPacketTime = data.time;
@@ -2258,7 +2278,7 @@
                     lastSyncPos.copy(pos);
                     try {
                         const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
-                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent, rarmX: customRightArmX, rarmZ: customRightArmZ });
+                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent, rarmX: customRightArmX, rarmY: customRightArmY, rarmZ: customRightArmZ });
                     } catch(e) {} 
                 }
             }, 150);
@@ -2469,10 +2489,18 @@
                 if(snap.exists()) {
                     const data = snap.data();
                     if(data.phoneQuat) {
-                        vrRemoteQuat.set(data.phoneQuat.x, data.phoneQuat.y, data.phoneQuat.z, data.phoneQuat.w);
-                        if (!isVRAttached) {
-                            isVRAttached = true;
-                            window.showNotification("Phone Headset Connected!");
+                        if (data.mode === 'controller') {
+                            vrRemoteArmQuat.set(data.phoneQuat.x, data.phoneQuat.y, data.phoneQuat.z, data.phoneQuat.w);
+                            if (!isVRControllerAttached) {
+                                isVRControllerAttached = true;
+                                window.showNotification("Phone Hand Controller Connected!");
+                            }
+                        } else {
+                            vrRemoteQuat.set(data.phoneQuat.x, data.phoneQuat.y, data.phoneQuat.z, data.phoneQuat.w);
+                            if (!isVRAttached) {
+                                isVRAttached = true;
+                                window.showNotification("Phone VR Headset Connected!");
+                            }
                         }
                     }
                 }
@@ -2491,7 +2519,7 @@
         window.showVRClientModal = () => { document.getElementById('vr-client-modal').classList.replace('hidden', 'flex'); }
         window.closeVRClientModal = () => { document.getElementById('vr-client-modal').classList.replace('flex', 'hidden'); }
 
-        window.connectPhoneVR = async () => {
+        window.connectPhoneVR = async (mode = 'headset') => {
             const codeInput = document.getElementById('vr-client-code');
             const code = codeInput ? codeInput.value.trim() : '';
             
@@ -2532,23 +2560,30 @@
                         try { document.body.requestFullscreen(); } catch(e){}
                         startBtn.remove();
                         
-                        if(data.gameId !== 'hub') {
-                            window.playGame(data.gameId, {name: "VR Sync", author: "Host PC", data: data.mapData});
+                        if (mode === 'headset') {
+                            if(data.gameId !== 'hub') {
+                                window.playGame(data.gameId, {name: "VR Sync", author: "Host PC", data: data.mapData});
+                            }
+                            isVRHeadsetMode = true;
+                            isVRRemoteClient = true;
+                            document.getElementById('hub').style.display = 'none';
+                            document.getElementById('game-hud').style.display = 'none';
+                            stereoEffect = new StereoEffect(renderer);
+                            stereoEffect.setSize(window.innerWidth, window.innerHeight);
+                        } else {
+                            document.getElementById('hub').style.display = 'none';
+                            document.getElementById('game-hud').style.display = 'none';
+                            const cScreen = document.createElement('div');
+                            cScreen.className = "absolute inset-0 bg-purple-900 z-[9000] flex flex-col items-center justify-center text-white";
+                            cScreen.innerHTML = "<div class='text-8xl mb-4'>🪄</div><h2 class='text-3xl font-black'>Controller Active</h2><p class='mt-2 text-gray-300'>Swing phone to move arm.</p>";
+                            document.body.appendChild(cScreen);
                         }
-                        
-                        isVRHeadsetMode = true;
-                        isVRRemoteClient = true;
-                        document.getElementById('hub').style.display = 'none';
-                        document.getElementById('game-hud').style.display = 'none';
                         
                         const exitBtn = document.createElement('div');
                         exitBtn.innerHTML = "✕";
                         exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl shadow-lg";
                         exitBtn.onclick = () => window.location.reload();
                         document.body.appendChild(exitBtn);
-
-                        stereoEffect = new StereoEffect(renderer);
-                        stereoEffect.setSize(window.innerWidth, window.innerHeight);
 
                         // Fallback: Touch to look if Gyroscope is blocked
                         if (gyroEnabled) {
@@ -2586,9 +2621,10 @@
 
                         setInterval(() => {
                             updateDoc(clientRef, {
+                                mode: mode,
                                 phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w }
                             }).catch(e=>{});
-                        }, 250);
+                        }, 100);
                     };
                 } else {
                     window.showNotification("Invalid Code! Host a game on your PC first.");
@@ -2601,6 +2637,7 @@
 
         // --- ESP32 SERIAL CONTROLLER LOGIC ---
         let customRightArmX = null;
+        let customRightArmY = null;
         let customRightArmZ = null;
 
         window.connectESP32 = async () => {
@@ -2629,28 +2666,30 @@
                         
                         for (let line of lines) {
                             let cmd = line.trim().toUpperCase();
-                            if(cmd === "W1") moveFwd = true;
-                            if(cmd === "W0") moveFwd = false;
-                            if(cmd === "S1") moveBwd = true;
-                            if(cmd === "S0") moveBwd = false;
-                            if(cmd === "A1") moveL = true;
-                            if(cmd === "A0") moveL = false;
-                            if(cmd === "D1") moveR = true;
-                            if(cmd === "D0") moveR = false;
-                            if(cmd === "J1" && canJump) { velocity.y = 350; canJump = false; playSound('jump'); }
-                            if(cmd === "CAM") { 
-                                activeCamera = (activeCamera === camera) ? thirdPersonCamera : camera; 
-                                myAvatarMesh.userData.head.visible = (activeCamera === thirdPersonCamera);
-                            }
+                            // Control Arm Rotation (Radians, e.g., -3.14 to 3.14)
                             if(cmd.startsWith("ARMX:")) customRightArmX = parseFloat(cmd.substring(5));
+                            if(cmd.startsWith("ARMY:")) customRightArmY = parseFloat(cmd.substring(5));
                             if(cmd.startsWith("ARMZ:")) customRightArmZ = parseFloat(cmd.substring(5));
-                            if(cmd === "ARM_RESET") { customRightArmX = null; customRightArmZ = null; }
+                            if(cmd === "ARM_RESET") { customRightArmX = null; customRightArmY = null; customRightArmZ = null; }
+                            
+                            // Optional Tool Triggers
+                            if(cmd === "TOOL1") window.equipTool(-1);
+                            if(cmd === "TOOL2") window.equipTool(0);
                         }
                     }
                 }
             } catch (error) {
                 console.error("ESP32 Error:", error);
-                window.showNotification("Failed to connect ESP32. Ensure it's not open in Arduino IDE.");
+                // Enhanced error message to show exactly why the browser rejected the connection
+                if (error.name === "NotFoundError") {
+                    window.showNotification("ESP32 Error: Device disconnected or port not found.");
+                } else if (error.name === "SecurityError") {
+                    window.showNotification("ESP32 Error: Web Serial is blocked in this window. Download the HTML file and run it directly.");
+                } else if (error.name === "NetworkError") {
+                    window.showNotification("ESP32 Error: Port is already open in another program (like Arduino IDE).");
+                } else {
+                    window.showNotification("ESP32 Error: " + (error.message || "Failed to connect."));
+                }
             }
         };
 
