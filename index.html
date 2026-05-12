@@ -1902,6 +1902,146 @@
             }
 
             if (isRagdolled) {
+                ragdollParts.forEach(part => {
+                    part.userData.velocity.y -= 200 * delta; part.userData.velocity.x *= 0.95; part.userData.velocity.z *= 0.95;
+                    part.position.add(part.userData.velocity.clone().multiplyScalar(delta));
+                    part.rotation.x += part.userData.tumble.x * delta; part.rotation.y += part.userData.tumble.y * delta; part.rotation.z += part.userData.tumble.z * delta;
+                    const bound = part.userData.size / 2;
+                    if (part.position.y < bound) {
+                        part.position.y = bound; part.userData.velocity.y *= -0.5; part.userData.velocity.x *= 0.7; part.userData.velocity.z *= 0.7; part.userData.tumble.multiplyScalar(0.7);
+                    }
+                });
+            } else {
+                myAvatarMesh.position.copy(playerObject.position); myAvatarMesh.position.y -= 9; 
+                myAvatarMesh.rotation.x = 0; myAvatarMesh.rotation.z = 0;
+                myAvatarMesh.rotation.y = cameraYaw;
+                
+                const speed = Math.sqrt(velocity.x*velocity.x + velocity.z*velocity.z);
+                let walkSpeed = speed; 
+                animateRig(myAvatarMesh, walkSpeed, !canJump && !isRagdolled);
+            }
+
+            playerObject.rotation.y = cameraYaw;
+
+            // Animate remote players
+            for(let id in otherPlayers) {
+                const p = otherPlayers[id];
+                const oldPos = p.position.clone();
+                p.position.lerp(p.userData.targetPos, 15 * delta);
+                
+                let diff = p.userData.targetRot - p.rotation.y;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                p.rotation.y += diff * 15 * delta;
+                
+                const distMoved = Math.sqrt(Math.pow(p.position.x - oldPos.x, 2) + Math.pow(p.position.z - oldPos.z, 2));
+                const remoteWalkSpeed = distMoved / delta;
+                animateRig(p, remoteWalkSpeed, p.userData.isJumping);
+            }
+
+            // Render Equipped Tool visually
+            if (equippedToolMesh) {
+                if (activeCamera === camera) {
+                    const offset = new THREE.Vector3(1.5, -1.5, -3);
+                    offset.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
+                    equippedToolMesh.position.copy(playerObject.position).add(offset);
+                    equippedToolMesh.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
+                    equippedToolMesh.position.y += Math.sin(time * 0.01) * 0.1; // Viewmodel bob
+                } else {
+                    const offset = new THREE.Vector3(1.5, -3, 0);
+                    offset.applyEuler(new THREE.Euler(0, cameraYaw, 0, 'YXZ'));
+                    equippedToolMesh.position.copy(playerObject.position).add(offset);
+                    equippedToolMesh.rotation.set(0, cameraYaw, 0, 'YXZ');
+                }
+            }
+
+            let targetFov = isSSprint ? 95 : 75;
+            camera.fov += (targetFov - camera.fov) * 0.1; camera.updateProjectionMatrix();
+            thirdPersonCamera.fov += (targetFov - thirdPersonCamera.fov) * 0.1; thirdPersonCamera.updateProjectionMatrix();
+
+            if (activeCamera === thirdPersonCamera) {
+                if (isRagdolled && ragdollParts.length > 0) {
+                    const headPart = ragdollParts[0]; 
+                    const offset = new THREE.Vector3(0, 5, 20); 
+                    offset.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
+                    thirdPersonCamera.position.lerp(headPart.position.clone().add(offset), 0.1); 
+                    thirdPersonCamera.lookAt(headPart.position);
+                } else {
+                    const offset = new THREE.Vector3(0, 2, 25);
+                    offset.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
+                    thirdPersonCamera.position.copy(playerObject.position).add(offset);
+                    thirdPersonCamera.lookAt(playerObject.position);
+                    
+                    const camRay = new THREE.Raycaster(playerObject.position, offset.clone().normalize(), 0, offset.length());
+                    const collidables = objects.filter(o => o.userData.type !== 'Spawn' && o.userData.type !== 'Checkpoint' && o.userData.type !== 'Tool');
+                    const hits = camRay.intersectObjects(collidables, false);
+                    if (hits.length > 0) { 
+                        thirdPersonCamera.position.copy(hits[0].point); 
+                        thirdPersonCamera.position.add(offset.clone().normalize().multiplyScalar(-0.5)); 
+                    }
+                }
+            } else {
+                camera.position.copy(playerObject.position);
+                camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
+            }
+
+            // Movement Reading Logic
+            if (!isRagdolled && isPointerLocked) { 
+                if (moveFwd) velocity.z -= (isSprinting ? 600.0 : 350.0) * delta;
+                if (moveBwd) velocity.z += (isSprinting ? 600.0 : 350.0) * delta;
+                if (moveL) velocity.x -= (isSprinting ? 600.0 : 350.0) * delta;
+                if (moveR) velocity.x += (isSprinting ? 600.0 : 350.0) * delta;
+            }
+
+            const xMovementDist = Math.abs(velocity.x * delta);
+            const zMovementDist = Math.abs(velocity.z * delta);
+
+            if (xMovementDist > 0.001) {
+                const moveX = new THREE.Vector3(velocity.x * delta, 0, 0);
+                const dirX = moveX.clone().normalize().applyEuler(new THREE.Euler(0, cameraYaw, 0));
+                const hitX = getHorizontalCollision(dirX, xMovementDist);
+                if (hitX) {
+                    if (hitX.userData.onTouch) hitX.userData.onTouch();
+                    velocity.x = 0;
+                } else {
+                    playerObject.translateX(velocity.x * delta);
+                }
+            }
+
+            if (zMovementDist > 0.001) {
+                const moveZ = new THREE.Vector3(0, 0, velocity.z * delta);
+                const dirZ = moveZ.clone().normalize().applyEuler(new THREE.Euler(0, cameraYaw, 0));
+                const hitZ = getHorizontalCollision(dirZ, zMovementDist);
+                if (hitZ) {
+                    if (hitZ.userData.onTouch) hitZ.userData.onTouch();
+                    if (hitZ.userData.type === 'Conveyor') {
+                        const pushDir = new THREE.Vector3(0, 0, -1).applyEuler(hitZ.rotation).normalize();
+                        playerObject.position.add(pushDir.multiplyScalar(60 * delta));
+                    }
+                    velocity.z = 0;
+                } else {
+                    playerObject.translateZ(velocity.z * delta);
+                }
+            }
+            
+            velocity.x -= velocity.x * 10.0 * delta; 
+            velocity.z -= velocity.z * 10.0 * delta; 
+
+            // Grapple Hook Physics
+            if (isGrappling) {
+                grappleLine.geometry.setFromPoints([playerObject.position.clone().add(new THREE.Vector3(0, 4, 0)), grappleTarget]);
+                const pullDir = grappleTarget.clone().sub(playerObject.position).normalize();
+                velocity.x += pullDir.x * 800 * delta;
+                velocity.z += pullDir.z * 800 * delta;
+                velocity.y += pullDir.y * 800 * delta;
+                
+                if (playerObject.position.distanceTo(grappleTarget) < 10) {
+                    isGrappling = false;
+                    grappleLine.visible = false;
+                }
+            }
+
+            if (isRagdolled) {
                 ragdollTimer -= delta;
                 if (ragdollTimer <= 0) respawnPlayer();
             } else {
