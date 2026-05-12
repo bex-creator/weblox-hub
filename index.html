@@ -2377,25 +2377,36 @@
 
         // --- VR HOST & CLIENT LOGIC ---
         window.startVRCasting = async () => {
-            if(!db) { window.showNotification("Database not connected."); return; }
+            if(!db || !currentUser) { window.showNotification("Please sign in or play as guest first!"); return; }
             const code = Math.floor(1000 + Math.random() * 9000).toString();
             document.getElementById('pause-vr-text').innerText = "VR Code: " + code;
-            window.showNotification("VR Code: " + code + ". Enter this on your phone!");
+            window.showNotification("Starting VR Host...");
 
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_sessions', code);
-            await setDoc(docRef, {
-                gameId: window.currentGameId || 'hub',
-                mapData: window.currentGameData ? window.currentGameData.data : null,
-                hostPos: {x: playerObject.position.x, y: playerObject.position.y, z: playerObject.position.z},
-                timestamp: Date.now()
-            });
+            
+            try {
+                await setDoc(docRef, {
+                    gameId: window.currentGameId || 'hub',
+                    mapData: window.currentGameData ? window.currentGameData.data : null,
+                    hostPos: {x: playerObject.position.x, y: playerObject.position.y, z: playerObject.position.z},
+                    timestamp: Date.now()
+                });
+                window.showNotification("VR Code: " + code + ". Enter this on your phone!");
+            } catch(e) {
+                console.error(e);
+                window.showNotification("Cloud blocked VR Hosting. Check connection.");
+                return;
+            }
 
             onSnapshot(docRef, (snap) => {
                 if(snap.exists()) {
                     const data = snap.data();
                     if(data.phoneQuat) {
                         vrRemoteQuat.set(data.phoneQuat.x, data.phoneQuat.y, data.phoneQuat.z, data.phoneQuat.w);
-                        isVRAttached = true;
+                        if (!isVRAttached) {
+                            isVRAttached = true;
+                            window.showNotification("Phone Headset Connected!");
+                        }
                     }
                 }
             });
@@ -2414,64 +2425,105 @@
         window.closeVRClientModal = () => { document.getElementById('vr-client-modal').classList.replace('flex', 'hidden'); }
 
         window.connectPhoneVR = async () => {
-            const code = document.getElementById('vr-client-code').value.trim();
-            if(!code || !db) return;
+            const codeInput = document.getElementById('vr-client-code');
+            const code = codeInput ? codeInput.value.trim() : '';
+            
+            if(!code) {
+                window.showNotification("Please enter the 4-digit code first!");
+                return;
+            }
+            if(!db || !currentUser) {
+                window.showNotification("Please sign in or play as guest first!");
+                return;
+            }
+            
+            window.showNotification("Checking code " + code + "...");
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_sessions', code);
-            const snap = await getDoc(docRef);
+            
+            try {
+                const snap = await getDoc(docRef);
 
-            if(snap.exists()) {
-                const data = snap.data();
-                window.closeVRClientModal();
-                
-                const startBtn = document.createElement('div');
-                startBtn.innerHTML = "<div class='text-center'><div class='text-6xl mb-4'>🥽</div><h1 class='text-2xl font-black mb-2'>Tap to Start VR</h1><p class='text-sm text-gray-400'>Place phone in VR Headset after tapping</p></div>";
-                startBtn.className = "absolute inset-0 bg-black z-[9999] flex items-center justify-center text-white cursor-pointer";
-                document.body.appendChild(startBtn);
+                if(snap.exists()) {
+                    const data = snap.data();
+                    window.closeVRClientModal();
+                    
+                    const startBtn = document.createElement('div');
+                    startBtn.innerHTML = "<div class='text-center'><div class='text-6xl mb-4'>🥽</div><h1 class='text-2xl font-black mb-2'>Tap to Start VR</h1><p class='text-sm text-gray-400'>Place phone in VR Headset after tapping</p><p class='text-xs text-gray-500 mt-4'>(If gyro fails, swipe to look)</p></div>";
+                    startBtn.className = "absolute inset-0 bg-black z-[9999] flex items-center justify-center text-white cursor-pointer";
+                    document.body.appendChild(startBtn);
 
-                startBtn.onclick = async () => {
-                    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                        try {
-                            const perm = await DeviceOrientationEvent.requestPermission();
-                            if (perm !== 'granted') { alert("Permission denied for phone gyroscope!"); return; }
-                        } catch(e) { console.error(e); }
-                    }
-                    
-                    try { document.body.requestFullscreen(); } catch(e){}
-                    startBtn.remove();
-                    
-                    if(data.gameId !== 'hub') {
-                        window.playGame(data.gameId, {name: "VR Sync", author: "Host PC", data: data.mapData});
-                    }
-                    
-                    isVRHeadsetMode = true;
-                    document.getElementById('hub').style.display = 'none';
-                    document.getElementById('game-hud').style.display = 'none';
-                    
-                    const exitBtn = document.createElement('div');
-                    exitBtn.innerHTML = "✕";
-                    exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl";
-                    exitBtn.onclick = () => window.location.reload();
-                    document.body.appendChild(exitBtn);
-
-                    deviceControls = new DeviceOrientationControls(camera);
-                    stereoEffect = new StereoEffect(renderer);
-                    stereoEffect.setSize(window.innerWidth, window.innerHeight);
-
-                    onSnapshot(docRef, (s) => {
-                        if(s.exists() && s.data().hostPos) {
-                            const hp = s.data().hostPos;
-                            playerObject.position.lerp(new THREE.Vector3(hp.x, hp.y, hp.z), 0.5);
+                    startBtn.onclick = async () => {
+                        let gyroEnabled = true;
+                        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                            try {
+                                const perm = await DeviceOrientationEvent.requestPermission();
+                                if (perm !== 'granted') { gyroEnabled = false; }
+                            } catch(e) { console.error(e); gyroEnabled = false; }
                         }
-                    });
+                        
+                        try { document.body.requestFullscreen(); } catch(e){}
+                        startBtn.remove();
+                        
+                        if(data.gameId !== 'hub') {
+                            window.playGame(data.gameId, {name: "VR Sync", author: "Host PC", data: data.mapData});
+                        }
+                        
+                        isVRHeadsetMode = true;
+                        document.getElementById('hub').style.display = 'none';
+                        document.getElementById('game-hud').style.display = 'none';
+                        
+                        const exitBtn = document.createElement('div');
+                        exitBtn.innerHTML = "✕";
+                        exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl";
+                        exitBtn.onclick = () => window.location.reload();
+                        document.body.appendChild(exitBtn);
 
-                    setInterval(() => {
-                        updateDoc(docRef, {
-                            phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w }
-                        }).catch(e=>{});
-                    }, 50);
-                };
-            } else {
-                window.showNotification("Invalid VR Code!");
+                        stereoEffect = new StereoEffect(renderer);
+                        stereoEffect.setSize(window.innerWidth, window.innerHeight);
+
+                        // Fallback: Touch to look if Gyroscope is blocked
+                        if (gyroEnabled) {
+                            try {
+                                deviceControls = new DeviceOrientationControls(camera);
+                            } catch (e) { gyroEnabled = false; }
+                        }
+                        
+                        if (!gyroEnabled) {
+                            let isDragging = false;
+                            let prevTouch = {x: 0, y: 0};
+                            document.addEventListener('touchstart', e => { isDragging = true; prevTouch = {x: e.touches[0].clientX, y: e.touches[0].clientY}; });
+                            document.addEventListener('touchend', e => { isDragging = false; });
+                            document.addEventListener('touchmove', e => {
+                                if(!isDragging) return;
+                                const deltaX = e.touches[0].clientX - prevTouch.x;
+                                const deltaY = e.touches[0].clientY - prevTouch.y;
+                                camera.rotation.order = "YXZ";
+                                camera.rotation.y -= deltaX * 0.005;
+                                camera.rotation.x -= deltaY * 0.005;
+                                camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+                                prevTouch = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+                            });
+                        }
+
+                        onSnapshot(docRef, (s) => {
+                            if(s.exists() && s.data().hostPos) {
+                                const hp = s.data().hostPos;
+                                playerObject.position.lerp(new THREE.Vector3(hp.x, hp.y, hp.z), 0.5);
+                            }
+                        });
+
+                        setInterval(() => {
+                            updateDoc(docRef, {
+                                phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w }
+                            }).catch(e=>{});
+                        }, 50);
+                    };
+                } else {
+                    window.showNotification("Invalid Code! Host a game on your PC first.");
+                }
+            } catch(e) {
+                console.error(e);
+                window.showNotification("Connection error! " + e.message);
             }
         };
 
