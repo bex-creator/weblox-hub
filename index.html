@@ -110,6 +110,7 @@
                     <a href="#" onclick="window.showStoreModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">🎒</span> Store</a>
                     <a href="#" onclick="window.showHubChatModal(); return false;" class="px-6 py-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">💬</span> Chat</a>
                     <a href="#" onclick="window.showAdminPanel(); return false;" class="px-6 py-2.5 text-red-400 hover:text-white hover:bg-white/5 rounded-xl font-bold transition-all flex items-center gap-2"><span class="text-lg">🛡️</span> Admin</a>
+                    <a href="#" onclick="window.showVRClientModal(); return false;" class="px-6 py-2.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded-xl font-bold transition-all flex items-center gap-2 border border-blue-500/30"><span class="text-lg">🥽</span> Mobile VR</a>
                 </nav>
             </div>
 
@@ -381,7 +382,9 @@
         
         <div class="flex flex-col gap-4 w-72 mb-16">
             <button class="bg-white text-black hover:bg-gray-200 py-4 rounded-2xl font-black text-lg transition-transform hover:scale-105 shadow-xl shadow-white/10" onclick="window.resumeGame()">Resume Game</button>
-            <button class="glass-panel text-white hover:bg-white/10 py-4 rounded-2xl font-bold text-lg transition-transform hover:scale-105 shadow-lg" onclick="window.leaveGame()">Leave Game</button>
+            <button class="glass-panel text-blue-400 hover:bg-blue-400/10 hover:text-blue-300 py-4 rounded-2xl font-bold text-lg transition-transform hover:scale-105 shadow-lg border border-blue-500/30" onclick="window.startVRCasting()"><span id="pause-vr-text">🥽 Connect Phone VR</span></button>
+            <button class="glass-panel text-emerald-400 hover:bg-emerald-400/10 hover:text-emerald-300 py-4 rounded-2xl font-bold text-lg transition-transform hover:scale-105 shadow-lg border border-emerald-500/30" onclick="window.connectESP32()"><span id="pause-esp32-text">🔌 Connect ESP32</span></button>
+            <button class="glass-panel text-red-400 hover:bg-red-400/10 hover:text-red-300 py-4 rounded-2xl font-bold text-lg transition-transform hover:scale-105 shadow-lg" onclick="window.leaveGame()">Leave Game</button>
         </div>
 
         <div class="glass-panel p-8 rounded-3xl text-sm text-left grid grid-cols-2 gap-x-16 gap-y-4 shadow-2xl text-gray-300 font-medium">
@@ -457,6 +460,22 @@
         </div>
     </div>
 
+    <!-- VR Client Modal -->
+    <div id="vr-client-modal" class="hidden flex-col items-center justify-center absolute inset-0 bg-black/90 z-[400] text-white pointer-events-auto backdrop-blur-xl">
+        <div class="glass-panel p-8 rounded-3xl w-[400px] shadow-2xl border border-white/10 text-center">
+            <div class="text-6xl mb-4">🥽</div>
+            <h2 class="text-2xl font-black text-white mb-2">Connect as Headset</h2>
+            <p class="text-sm text-gray-400 mb-6">Enter the 4-digit code shown on your PC screen to use this phone as a VR headset.</p>
+            
+            <input type="number" id="vr-client-code" placeholder="0000" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 mb-6 text-white text-center text-3xl tracking-widest font-black focus:outline-none focus:border-blue-500 transition-colors" autocomplete="off" max="9999">
+            
+            <div class="flex flex-col gap-3">
+                <button class="bg-blue-600 hover:bg-blue-500 w-full py-4 rounded-xl font-bold text-sm transition-transform hover:scale-[1.02] shadow-lg shadow-blue-600/20" onclick="window.connectPhoneVR()">Connect & Start VR</button>
+                <button class="text-gray-400 hover:text-white font-semibold text-sm transition-colors py-2" onclick="window.closeVRClientModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ES Module Imports for Engine -->
     <script type="module">
         import * as THREE from 'three';
@@ -464,6 +483,8 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
         import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+        import { StereoEffect } from 'three/addons/effects/StereoEffect.js';
+        import { DeviceOrientationControls } from 'three/addons/controls/DeviceOrientationControls.js';
         
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1349,6 +1370,15 @@
         let isGrappling = false;
         let grappleTarget = new THREE.Vector3();
         
+        // --- VR GLOBALS ---
+        let isVRHeadsetMode = false;
+        let isVRAttached = false;
+        let vrRemoteQuat = new THREE.Quaternion();
+        let stereoEffect, deviceControls;
+        let currentGameId = 'hub';
+        let currentGameData = null;
+        let vrHostSyncInterval = null;
+
         const grappleGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
         const grappleMat = new THREE.LineBasicMaterial({color: 0xff0000});
         const grappleLine = new THREE.Line(grappleGeo, grappleMat);
@@ -1858,145 +1888,16 @@
                     meshGroup.userData.limbs.forEach(l => { l.rotation.x *= 0.8; l.rotation.z *= 0.8; });
                     meshGroup.userData.joints.forEach(j => j.rotation.x *= 0.8);
                 }
-            }
-
-            if (isRagdolled) {
-                ragdollParts.forEach(part => {
-                    part.userData.velocity.y -= 200 * delta; part.userData.velocity.x *= 0.95; part.userData.velocity.z *= 0.95;
-                    part.position.add(part.userData.velocity.clone().multiplyScalar(delta));
-                    part.rotation.x += part.userData.tumble.x * delta; part.rotation.y += part.userData.tumble.y * delta; part.rotation.z += part.userData.tumble.z * delta;
-                    const bound = part.userData.size / 2;
-                    if (part.position.y < bound) {
-                        part.position.y = bound; part.userData.velocity.y *= -0.5; part.userData.velocity.x *= 0.7; part.userData.velocity.z *= 0.7; part.userData.tumble.multiplyScalar(0.7);
+                
+                // Override Right Arm (limbs[1]) for ESP32 Control
+                if (meshGroup === myAvatarMesh && customRightArmX !== null) {
+                    meshGroup.userData.limbs[1].rotation.x = customRightArmX;
+                    if (customRightArmZ !== null) meshGroup.userData.limbs[1].rotation.z = customRightArmZ;
+                } else if (meshGroup.userData.customRightArmX !== undefined && meshGroup.userData.customRightArmX !== null) {
+                    meshGroup.userData.limbs[1].rotation.x = meshGroup.userData.customRightArmX;
+                    if (meshGroup.userData.customRightArmZ !== undefined && meshGroup.userData.customRightArmZ !== null) {
+                        meshGroup.userData.limbs[1].rotation.z = meshGroup.userData.customRightArmZ;
                     }
-                });
-            } else {
-                myAvatarMesh.position.copy(playerObject.position); myAvatarMesh.position.y -= 9; 
-                myAvatarMesh.rotation.x = 0; myAvatarMesh.rotation.z = 0;
-                myAvatarMesh.rotation.y = cameraYaw;
-                
-                const speed = Math.sqrt(velocity.x*velocity.x + velocity.z*velocity.z);
-                let walkSpeed = speed; 
-                animateRig(myAvatarMesh, walkSpeed, !canJump && !isRagdolled);
-            }
-
-            playerObject.rotation.y = cameraYaw;
-
-            // Animate remote players
-            for(let id in otherPlayers) {
-                const p = otherPlayers[id];
-                const oldPos = p.position.clone();
-                p.position.lerp(p.userData.targetPos, 15 * delta);
-                
-                let diff = p.userData.targetRot - p.rotation.y;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                p.rotation.y += diff * 15 * delta;
-                
-                const distMoved = Math.sqrt(Math.pow(p.position.x - oldPos.x, 2) + Math.pow(p.position.z - oldPos.z, 2));
-                const remoteWalkSpeed = distMoved / delta;
-                animateRig(p, remoteWalkSpeed, p.userData.isJumping);
-            }
-
-            // Render Equipped Tool visually
-            if (equippedToolMesh) {
-                if (activeCamera === camera) {
-                    const offset = new THREE.Vector3(1.5, -1.5, -3);
-                    offset.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
-                    equippedToolMesh.position.copy(playerObject.position).add(offset);
-                    equippedToolMesh.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
-                    equippedToolMesh.position.y += Math.sin(time * 0.01) * 0.1; // Viewmodel bob
-                } else {
-                    const offset = new THREE.Vector3(1.5, -3, 0);
-                    offset.applyEuler(new THREE.Euler(0, cameraYaw, 0, 'YXZ'));
-                    equippedToolMesh.position.copy(playerObject.position).add(offset);
-                    equippedToolMesh.rotation.set(0, cameraYaw, 0, 'YXZ');
-                }
-            }
-
-            let targetFov = isSprinting ? 95 : 75;
-            camera.fov += (targetFov - camera.fov) * 0.1; camera.updateProjectionMatrix();
-            thirdPersonCamera.fov += (targetFov - thirdPersonCamera.fov) * 0.1; thirdPersonCamera.updateProjectionMatrix();
-
-            if (activeCamera === thirdPersonCamera) {
-                if (isRagdolled && ragdollParts.length > 0) {
-                    const headPart = ragdollParts[0]; 
-                    const offset = new THREE.Vector3(0, 5, 20); 
-                    offset.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
-                    thirdPersonCamera.position.lerp(headPart.position.clone().add(offset), 0.1); 
-                    thirdPersonCamera.lookAt(headPart.position);
-                } else {
-                    const offset = new THREE.Vector3(0, 2, 25);
-                    offset.applyEuler(new THREE.Euler(cameraPitch, cameraYaw, 0, 'YXZ'));
-                    thirdPersonCamera.position.copy(playerObject.position).add(offset);
-                    thirdPersonCamera.lookAt(playerObject.position);
-                    
-                    const camRay = new THREE.Raycaster(playerObject.position, offset.clone().normalize(), 0, offset.length());
-                    const collidables = objects.filter(o => o.userData.type !== 'Spawn' && o.userData.type !== 'Checkpoint' && o.userData.type !== 'Tool');
-                    const hits = camRay.intersectObjects(collidables, false);
-                    if (hits.length > 0) { 
-                        thirdPersonCamera.position.copy(hits[0].point); 
-                        thirdPersonCamera.position.add(offset.clone().normalize().multiplyScalar(-0.5)); 
-                    }
-                }
-            } else {
-                camera.position.copy(playerObject.position);
-                camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
-            }
-
-            // Movement Reading Logic
-            if (!isRagdolled && isPointerLocked) { 
-                if (moveFwd) velocity.z -= (isSprinting ? 600.0 : 350.0) * delta;
-                if (moveBwd) velocity.z += (isSprinting ? 600.0 : 350.0) * delta;
-                if (moveL) velocity.x -= (isSprinting ? 600.0 : 350.0) * delta;
-                if (moveR) velocity.x += (isSprinting ? 600.0 : 350.0) * delta;
-            }
-
-            const xMovementDist = Math.abs(velocity.x * delta);
-            const zMovementDist = Math.abs(velocity.z * delta);
-
-            if (xMovementDist > 0.001) {
-                const moveX = new THREE.Vector3(velocity.x * delta, 0, 0);
-                const dirX = moveX.clone().normalize().applyEuler(new THREE.Euler(0, cameraYaw, 0));
-                const hitX = getHorizontalCollision(dirX, xMovementDist);
-                if (hitX) {
-                    if (hitX.userData.onTouch) hitX.userData.onTouch();
-                    velocity.x = 0;
-                } else {
-                    playerObject.translateX(velocity.x * delta);
-                }
-            }
-
-            if (zMovementDist > 0.001) {
-                const moveZ = new THREE.Vector3(0, 0, velocity.z * delta);
-                const dirZ = moveZ.clone().normalize().applyEuler(new THREE.Euler(0, cameraYaw, 0));
-                const hitZ = getHorizontalCollision(dirZ, zMovementDist);
-                if (hitZ) {
-                    if (hitZ.userData.onTouch) hitZ.userData.onTouch();
-                    if (hitZ.userData.type === 'Conveyor') {
-                        const pushDir = new THREE.Vector3(0, 0, -1).applyEuler(hitZ.rotation).normalize();
-                        playerObject.position.add(pushDir.multiplyScalar(60 * delta));
-                    }
-                    velocity.z = 0;
-                } else {
-                    playerObject.translateZ(velocity.z * delta);
-                }
-            }
-            
-            velocity.x -= velocity.x * 10.0 * delta; 
-            velocity.z -= velocity.z * 10.0 * delta; 
-
-            // Grapple Hook Physics
-            if (isGrappling) {
-                grappleLine.geometry.setFromPoints([playerObject.position.clone().add(new THREE.Vector3(0, 4, 0)), grappleTarget]);
-                const pullDir = grappleTarget.clone().sub(playerObject.position).normalize();
-                velocity.x += pullDir.x * 800 * delta;
-                velocity.z += pullDir.z * 800 * delta;
-                velocity.y += pullDir.y * 800 * delta;
-                
-                if (playerObject.position.distanceTo(grappleTarget) < 10) {
-                    isGrappling = false;
-                    grappleLine.visible = false;
                 }
             }
 
@@ -2059,8 +1960,23 @@
             if (playerObject.position.y < -50) respawnPlayer();
 
             prevTime = time;
-            renderer.render(scene, activeCamera);
-            cssRenderer.render(scene, activeCamera);
+
+            if (isVRHeadsetMode) {
+                if(deviceControls) deviceControls.update();
+                camera.position.copy(playerObject.position);
+                if(stereoEffect) stereoEffect.render(scene, camera);
+            } else {
+                if (activeCamera === camera && isVRAttached) {
+                    camera.quaternion.slerp(vrRemoteQuat, 0.5);
+                    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+                    cameraYaw = euler.y;
+                    cameraPitch = euler.x;
+                } else if (activeCamera === camera) {
+                    camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
+                }
+                renderer.render(scene, activeCamera);
+                cssRenderer.render(scene, activeCamera);
+            }
         }
 
         // --- FIREBASE SYNC & ROOM LOGIC ---
@@ -2105,6 +2021,8 @@
                         player.userData.targetPos.set(data.x, data.y - 9, data.z); 
                         player.userData.targetRot = data.ry;
                         player.userData.isJumping = data.jumping || false;
+                        player.userData.customRightArmX = data.rarmX;
+                        player.userData.customRightArmZ = data.rarmZ;
                         player.userData.lastUpdate = Date.now();
                         player.userData.lastPacketTime = data.time;
 
@@ -2188,11 +2106,11 @@
             setInterval(async () => {
                 if(!currentUser || !db) return;
                 const pos = playerObject.position;
-                if (pos.distanceTo(lastSyncPos) > 0.5 || Math.random() < 0.1) {
+                if (pos.distanceTo(lastSyncPos) > 0.5 || Math.random() < 0.1 || customRightArmX !== null) {
                     lastSyncPos.copy(pos);
                     try {
                         const myRoomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', currentRoomId, 'players', currentUser.uid);
-                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent });
+                        await setDoc(myRoomRef, { x: pos.x, y: pos.y, z: pos.z, ry: cameraYaw, jumping: !canJump, time: Date.now(), avatar: myAvatarColors, bomb: localBombEvent, rarmX: customRightArmX, rarmZ: customRightArmZ });
                     } catch(e) {} 
                 }
             }, 150);
@@ -2282,6 +2200,9 @@
             document.getElementById('current-game-title').innerText = gameData.name;
             document.getElementById('current-game-author').innerText = "By " + gameData.author;
             
+            window.currentGameId = gameId;
+            window.currentGameData = gameData;
+            
             prevTime = performance.now();
             isInGame = true;
             window.clearLevel(false);
@@ -2308,6 +2229,161 @@
             respawnPlayer();
             window.joinRoom(gameId);
             setTimeout(() => { if (activeCamera === camera && !isPaused) lockPointer(); }, 100);
+        };
+
+        // --- VR HOST & CLIENT LOGIC ---
+        window.startVRCasting = async () => {
+            if(!db) { window.showNotification("Database not connected."); return; }
+            const code = Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById('pause-vr-text').innerText = "VR Code: " + code;
+            window.showNotification("VR Code: " + code + ". Enter this on your phone!");
+
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_sessions', code);
+            await setDoc(docRef, {
+                gameId: window.currentGameId || 'hub',
+                mapData: window.currentGameData ? window.currentGameData.data : null,
+                hostPos: {x: playerObject.position.x, y: playerObject.position.y, z: playerObject.position.z},
+                timestamp: Date.now()
+            });
+
+            onSnapshot(docRef, (snap) => {
+                if(snap.exists()) {
+                    const data = snap.data();
+                    if(data.phoneQuat) {
+                        vrRemoteQuat.set(data.phoneQuat.x, data.phoneQuat.y, data.phoneQuat.z, data.phoneQuat.w);
+                        isVRAttached = true;
+                    }
+                }
+            });
+
+            if(vrHostSyncInterval) clearInterval(vrHostSyncInterval);
+            vrHostSyncInterval = setInterval(() => {
+                if(isInGame) {
+                    updateDoc(docRef, {
+                        hostPos: {x: playerObject.position.x, y: playerObject.position.y, z: playerObject.position.z}
+                    }).catch(e=>{});
+                }
+            }, 50);
+        };
+
+        window.showVRClientModal = () => { document.getElementById('vr-client-modal').classList.replace('hidden', 'flex'); }
+        window.closeVRClientModal = () => { document.getElementById('vr-client-modal').classList.replace('flex', 'hidden'); }
+
+        window.connectPhoneVR = async () => {
+            const code = document.getElementById('vr-client-code').value.trim();
+            if(!code || !db) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_sessions', code);
+            const snap = await getDoc(docRef);
+
+            if(snap.exists()) {
+                const data = snap.data();
+                window.closeVRClientModal();
+                
+                const startBtn = document.createElement('div');
+                startBtn.innerHTML = "<div class='text-center'><div class='text-6xl mb-4'>🥽</div><h1 class='text-2xl font-black mb-2'>Tap to Start VR</h1><p class='text-sm text-gray-400'>Place phone in VR Headset after tapping</p></div>";
+                startBtn.className = "absolute inset-0 bg-black z-[9999] flex items-center justify-center text-white cursor-pointer";
+                document.body.appendChild(startBtn);
+
+                startBtn.onclick = async () => {
+                    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                        try {
+                            const perm = await DeviceOrientationEvent.requestPermission();
+                            if (perm !== 'granted') { alert("Permission denied for phone gyroscope!"); return; }
+                        } catch(e) { console.error(e); }
+                    }
+                    
+                    try { document.body.requestFullscreen(); } catch(e){}
+                    startBtn.remove();
+                    
+                    if(data.gameId !== 'hub') {
+                        window.playGame(data.gameId, {name: "VR Sync", author: "Host PC", data: data.mapData});
+                    }
+                    
+                    isVRHeadsetMode = true;
+                    document.getElementById('hub').style.display = 'none';
+                    document.getElementById('game-hud').style.display = 'none';
+                    
+                    const exitBtn = document.createElement('div');
+                    exitBtn.innerHTML = "✕";
+                    exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl";
+                    exitBtn.onclick = () => window.location.reload();
+                    document.body.appendChild(exitBtn);
+
+                    deviceControls = new DeviceOrientationControls(camera);
+                    stereoEffect = new StereoEffect(renderer);
+                    stereoEffect.setSize(window.innerWidth, window.innerHeight);
+
+                    onSnapshot(docRef, (s) => {
+                        if(s.exists() && s.data().hostPos) {
+                            const hp = s.data().hostPos;
+                            playerObject.position.lerp(new THREE.Vector3(hp.x, hp.y, hp.z), 0.5);
+                        }
+                    });
+
+                    setInterval(() => {
+                        updateDoc(docRef, {
+                            phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w }
+                        }).catch(e=>{});
+                    }, 50);
+                };
+            } else {
+                window.showNotification("Invalid VR Code!");
+            }
+        };
+
+        // --- ESP32 SERIAL CONTROLLER LOGIC ---
+        let customRightArmX = null;
+        let customRightArmZ = null;
+
+        window.connectESP32 = async () => {
+            if (!('serial' in navigator)) {
+                window.showNotification("Web Serial API not supported! Use Chrome or Edge.");
+                return;
+            }
+            try {
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                window.showNotification("ESP32 Connected! (115200 baud)");
+                document.getElementById('pause-esp32-text').innerText = "🔌 ESP32 Connected";
+
+                const textDecoder = new TextDecoderStream();
+                port.readable.pipeTo(textDecoder.writable);
+                const reader = textDecoder.readable.getReader();
+
+                let buffer = "";
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) { reader.releaseLock(); break; }
+                    if (value) {
+                        buffer += value;
+                        let lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete line in buffer
+                        
+                        for (let line of lines) {
+                            let cmd = line.trim().toUpperCase();
+                            if(cmd === "W1") moveFwd = true;
+                            if(cmd === "W0") moveFwd = false;
+                            if(cmd === "S1") moveBwd = true;
+                            if(cmd === "S0") moveBwd = false;
+                            if(cmd === "A1") moveL = true;
+                            if(cmd === "A0") moveL = false;
+                            if(cmd === "D1") moveR = true;
+                            if(cmd === "D0") moveR = false;
+                            if(cmd === "J1" && canJump) { velocity.y = 350; canJump = false; playSound('jump'); }
+                            if(cmd === "CAM") { 
+                                activeCamera = (activeCamera === camera) ? thirdPersonCamera : camera; 
+                                myAvatarMesh.userData.head.visible = (activeCamera === thirdPersonCamera);
+                            }
+                            if(cmd.startsWith("ARMX:")) customRightArmX = parseFloat(cmd.substring(5));
+                            if(cmd.startsWith("ARMZ:")) customRightArmZ = parseFloat(cmd.substring(5));
+                            if(cmd === "ARM_RESET") { customRightArmX = null; customRightArmZ = null; }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("ESP32 Error:", error);
+                window.showNotification("Failed to connect ESP32. Ensure it's not open in Arduino IDE.");
+            }
         };
 
         // --- SECRET ADMIN CODE ---
