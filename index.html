@@ -1516,7 +1516,7 @@
 
         function instantiateBlock(position, typeId, colorHex, scriptCode = "", sx = 1, sy = 1, sz = 1) {
             const typeDef = Object.values(BLOCK_TYPES).find(t => t.id === typeId) || BLOCK_TYPES.NORMAL;
-            const finalColor = typeDef.colorOverride !== null ? typeDef.colorOverride : colorHex;
+            const finalColor = typeDef.colorOverride !== undefined ? typeDef.colorOverride : colorHex;
             
             let geo = blockGeo;
             if (typeDef.shape === 'ramp') geo = rampGeo;
@@ -2219,7 +2219,7 @@
                         const sx = b.sx !== undefined ? b.sx : (b.scale ? b.scale.x : 1);
                         const sy = b.sy !== undefined ? b.sy : (b.scale ? b.scale.y : 1);
                         const sz = b.sz !== undefined ? b.sz : (b.scale ? b.scale.z : 1);
-                        const blockColor = b.colorHex !== undefined ? b.colorHex : b.color;
+                        const blockColor = b.colorHex !== undefined ? b.colorHex : (b.color !== undefined ? b.color : 0xffffff);
                         
                         instantiateBlock(new THREE.Vector3(px, py, pz), b.type, blockColor, b.script, sx, sy, sz);
                     });
