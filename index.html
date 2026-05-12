@@ -2280,6 +2280,105 @@
         }
 
         // --- GAME PLAY LOGIC ---
+        window.playGame = function(gameId, gameData) {
+            document.getElementById('hub').style.display = 'none';
+            document.getElementById('game-hud').style.display = 'flex';
+            document.getElementById('current-game-title').innerText = gameData.name;
+            document.getElementById('current-game-author').innerText = "By " + gameData.author;
+            
+            window.currentGameId = gameId;
+            window.currentGameData = gameData;
+            
+            prevTime = performance.now();
+            isInGame = true;
+            window.clearLevel(false);
+            
+            try {
+                const parsedData = JSON.parse(gameData.data);
+                const blocksArray = Array.isArray(parsedData) ? parsedData : parsedData.blocks;
+                
+                if (blocksArray) {
+                    blocksArray.forEach(b => {
+                        const px = b.px !== undefined ? b.px : (b.position ? b.position.x : 0);
+                        const py = b.py !== undefined ? b.py : (b.position ? b.position.y : 0);
+                        const pz = b.pz !== undefined ? b.pz : (b.position ? b.position.z : 0);
+                        const sx = b.sx !== undefined ? b.sx : (b.scale ? b.scale.x : 1);
+                        const sy = b.sy !== undefined ? b.sy : (b.scale ? b.scale.y : 1);
+                        const sz = b.sz !== undefined ? b.sz : (b.scale ? b.scale.z : 1);
+                        const blockColor = b.colorHex !== undefined ? b.colorHex : (b.color !== undefined ? b.color : 0xffffff);
+                        
+                        instantiateBlock(new THREE.Vector3(px, py, pz), b.type, blockColor, b.script, sx, sy, sz);
+                    });
+                }
+            } catch(e) { console.error("Error loading game data", e); }
+            
+            respawnPlayer();
+            window.joinRoom(gameId);
+
+            // Automatically check if running on Mobile and prompt for Local VR Look Mode
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                window.enableLocalMobileVR();
+            } else {
+                setTimeout(() => { if (activeCamera === camera && !isPaused) lockPointer(); }, 100);
+            }
+        };
+
+        window.enableLocalMobileVR = function() {
+            const startBtn = document.createElement('div');
+            startBtn.innerHTML = "<div class='text-center'><div class='text-6xl mb-4'>🥽</div><h1 class='text-2xl font-black mb-2'>Tap to Enter VR</h1><p class='text-sm text-gray-400'>Place phone in VR headset after tapping</p><p class='text-xs text-gray-500 mt-4'>(If gyro fails, swipe to look)</p></div>";
+            startBtn.className = "absolute inset-0 bg-black z-[9999] flex items-center justify-center text-white cursor-pointer";
+            document.body.appendChild(startBtn);
+
+            startBtn.onclick = async () => {
+                let gyroEnabled = true;
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    try {
+                        const perm = await DeviceOrientationEvent.requestPermission();
+                        if (perm !== 'granted') { gyroEnabled = false; }
+                    } catch(e) { console.error(e); gyroEnabled = false; }
+                }
+                
+                try { document.body.requestFullscreen(); } catch(e){}
+                startBtn.remove();
+                
+                isVRHeadsetMode = true;
+                document.getElementById('game-hud').style.display = 'none'; // Hide HUD to fully immerse
+                
+                const exitBtn = document.createElement('div');
+                exitBtn.innerHTML = "✕";
+                exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl shadow-lg";
+                exitBtn.onclick = () => window.location.reload();
+                document.body.appendChild(exitBtn);
+
+                stereoEffect = new StereoEffect(renderer);
+                stereoEffect.setSize(window.innerWidth, window.innerHeight);
+
+                if (gyroEnabled) {
+                    try {
+                        deviceControls = new DeviceOrientationControls(camera);
+                    } catch (e) { gyroEnabled = false; }
+                }
+                
+                if (!gyroEnabled) {
+                    let isDragging = false;
+                    let prevTouch = {x: 0, y: 0};
+                    document.addEventListener('touchstart', e => { isDragging = true; prevTouch = {x: e.touches[0].clientX, y: e.touches[0].clientY}; });
+                    document.addEventListener('touchend', e => { isDragging = false; });
+                    document.addEventListener('touchmove', e => {
+                        if(!isDragging) return;
+                        const deltaX = e.touches[0].clientX - prevTouch.x;
+                        const deltaY = e.touches[0].clientY - prevTouch.y;
+                        camera.rotation.order = "YXZ";
+                        camera.rotation.y -= deltaX * 0.005;
+                        camera.rotation.x -= deltaY * 0.005;
+                        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+                        prevTouch = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+                    });
+                }
+            };
+        };
+
         window.joinFriendGame = async (gameId) => {
             if (!db || !currentUser) return;
             if (gameId === 'hub') {
@@ -2336,43 +2435,6 @@
                 console.error("Fetch games error:", e);
                 list.innerHTML = `<div class="text-red-500 font-bold p-8 text-center">Failed to load experiences.</div>`;
             }
-        };
-
-        window.playGame = function(gameId, gameData) {
-            document.getElementById('hub').style.display = 'none';
-            document.getElementById('game-hud').style.display = 'flex';
-            document.getElementById('current-game-title').innerText = gameData.name;
-            document.getElementById('current-game-author').innerText = "By " + gameData.author;
-            
-            window.currentGameId = gameId;
-            window.currentGameData = gameData;
-            
-            prevTime = performance.now();
-            isInGame = true;
-            window.clearLevel(false);
-            
-            try {
-                const parsedData = JSON.parse(gameData.data);
-                const blocksArray = Array.isArray(parsedData) ? parsedData : parsedData.blocks;
-                
-                if (blocksArray) {
-                    blocksArray.forEach(b => {
-                        const px = b.px !== undefined ? b.px : (b.position ? b.position.x : 0);
-                        const py = b.py !== undefined ? b.py : (b.position ? b.position.y : 0);
-                        const pz = b.pz !== undefined ? b.pz : (b.position ? b.position.z : 0);
-                        const sx = b.sx !== undefined ? b.sx : (b.scale ? b.scale.x : 1);
-                        const sy = b.sy !== undefined ? b.sy : (b.scale ? b.scale.y : 1);
-                        const sz = b.sz !== undefined ? b.sz : (b.scale ? b.scale.z : 1);
-                        const blockColor = b.colorHex !== undefined ? b.colorHex : (b.color !== undefined ? b.color : 0xffffff);
-                        
-                        instantiateBlock(new THREE.Vector3(px, py, pz), b.type, blockColor, b.script, sx, sy, sz);
-                    });
-                }
-            } catch(e) { console.error("Error loading game data", e); }
-            
-            respawnPlayer();
-            window.joinRoom(gameId);
-            setTimeout(() => { if (activeCamera === camera && !isPaused) lockPointer(); }, 100);
         };
 
         // --- VR HOST & CLIENT LOGIC ---
