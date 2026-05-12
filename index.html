@@ -1382,6 +1382,7 @@
         let vrRemoteQuat = new THREE.Quaternion();
         let isVRControllerAttached = false;
         let vrRemoteArmQuat = new THREE.Quaternion();
+        let vrRemoteYawOffset = 0;
         let stereoEffect, deviceControls;
         let currentGameId = 'hub';
         let currentGameData = null;
@@ -1904,14 +1905,17 @@
                     if (isVRControllerAttached) {
                         const euler = new THREE.Euler().setFromQuaternion(vrRemoteArmQuat, 'YXZ');
                         
-                        // Fix the "Weird Gyro" by making the phone's yaw relative to the avatar's body direction
-                        let localYaw = euler.y - cameraYaw;
+                        // Fix the "Weird Gyro" by making the phone's yaw relative to the avatar's body AND the physical monitor offset
+                        let localYaw = euler.y - vrRemoteYawOffset - cameraYaw;
                         while (localYaw < -Math.PI) localYaw += Math.PI * 2;
                         while (localYaw > Math.PI) localYaw -= Math.PI * 2;
 
+                        // Offset pitch so holding it flat like a TV remote points the arm forward intuitively
+                        let targetPitch = euler.x + Math.PI;
+
                         // Fix "Lag" by using Smooth Interpolation (Lerp) to glide between network updates
                         const lerpSpeed = 15 * delta;
-                        meshGroup.userData.limbs[1].rotation.x += (euler.x - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
+                        meshGroup.userData.limbs[1].rotation.x += (targetPitch - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
                         meshGroup.userData.limbs[1].rotation.y += (localYaw - meshGroup.userData.limbs[1].rotation.y) * lerpSpeed;
                         meshGroup.userData.limbs[1].rotation.z += (euler.z - meshGroup.userData.limbs[1].rotation.z) * lerpSpeed;
 
@@ -2506,6 +2510,7 @@
                     if(data.phoneQuat) {
                         if (data.mode === 'controller') {
                             vrRemoteArmQuat.set(data.phoneQuat.x, data.phoneQuat.y, data.phoneQuat.z, data.phoneQuat.w);
+                            vrRemoteYawOffset = data.yawOffset || 0;
                             if (!isVRControllerAttached) {
                                 isVRControllerAttached = true;
                                 window.showNotification("Phone Hand Controller Connected!");
@@ -2589,9 +2594,40 @@
                             document.getElementById('hub').style.display = 'none';
                             document.getElementById('game-hud').style.display = 'none';
                             const cScreen = document.createElement('div');
-                            cScreen.className = "absolute inset-0 bg-purple-900 z-[9000] flex flex-col items-center justify-center text-white";
-                            cScreen.innerHTML = "<div class='text-8xl mb-4'>🪄</div><h2 class='text-3xl font-black'>Controller Active</h2><p class='mt-2 text-gray-300'>Swing phone to move arm.</p>";
+                            cScreen.className = "absolute inset-0 bg-purple-900 z-[9000] flex flex-col items-center justify-center text-white select-none";
+                            cScreen.innerHTML = `
+                                <div class='text-8xl mb-4'>🪄</div>
+                                <h2 class='text-3xl font-black'>Controller Active</h2>
+                                <p class='mt-2 text-gray-300 font-medium text-center px-6'>Hold phone like a TV remote pointing at your monitor.</p>
+                                <button id='vr-recenter-btn' class='mt-12 bg-white/10 hover:bg-white/20 border border-white/30 px-10 py-5 rounded-full font-black text-xl transition-all shadow-xl active:scale-95'>🎯 Tap to Recenter</button>
+                            `;
                             document.body.appendChild(cScreen);
+
+                            window.phoneYawOffset = 0;
+                            document.getElementById('vr-recenter-btn').onclick = (e) => {
+                                e.stopPropagation();
+                                const e2 = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+                                window.phoneYawOffset = e2.y;
+                                
+                                const btn = document.getElementById('vr-recenter-btn');
+                                btn.innerText = "✅ Recentered!";
+                                btn.classList.replace('bg-white/10', 'bg-green-500/40');
+                                btn.classList.replace('border-white/30', 'border-green-400');
+                                setTimeout(() => {
+                                    btn.innerText = "🎯 Tap to Recenter";
+                                    btn.classList.replace('bg-green-500/40', 'bg-white/10');
+                                    btn.classList.replace('border-green-400', 'border-white/30');
+                                }, 1500);
+                            };
+
+                            // Auto-calibrate initially once gyroscope settles
+                            const checkInitial = setInterval(() => {
+                                if (camera.quaternion.x !== 0 || camera.quaternion.y !== 0) {
+                                    const eInit = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+                                    window.phoneYawOffset = eInit.y;
+                                    clearInterval(checkInitial);
+                                }
+                            }, 200);
                         }
                         
                         const exitBtn = document.createElement('div');
@@ -2637,7 +2673,8 @@
                         setInterval(() => {
                             updateDoc(clientRef, {
                                 mode: mode,
-                                phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w }
+                                phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w },
+                                yawOffset: window.phoneYawOffset || 0
                             }).catch(e=>{});
                         }, 80);
                     };
