@@ -2078,7 +2078,9 @@
                 unsubscribeRoom = onSnapshot(roomCol, (snapshot) => {
                     snapshot.forEach(docSnap => {
                         const data = docSnap.data();
-                        if (Date.now() - data.time > 10000 || docSnap.id === currentUser.uid) return;
+                        
+                        // FIX: Increased limit to 120000ms (2 mins) to account for PC clock drift on different networks!
+                        if (Date.now() - data.time > 120000 || docSnap.id === currentUser.uid) return;
                         
                         const newAvatarStr = JSON.stringify(data.avatar || {});
                         
@@ -2096,10 +2098,15 @@
                         }
                         
                         const player = otherPlayers[docSnap.id];
+                        
+                        // FIX: Prevent ghosting by ensuring we only update if it's a fresh packet
+                        if (player.userData.lastPacketTime === data.time) return;
+
                         player.userData.targetPos.set(data.x, data.y - 9, data.z); 
                         player.userData.targetRot = data.ry;
                         player.userData.isJumping = data.jumping || false;
                         player.userData.lastUpdate = Date.now();
+                        player.userData.lastPacketTime = data.time;
 
                         if (data.bomb && data.bomb.id !== player.userData.lastBombId) {
                             player.userData.lastBombId = data.bomb.id;
@@ -2129,7 +2136,9 @@
 
                     snapshot.forEach(docSnap => {
                         const data = docSnap.data();
-                        if (Date.now() - data.time > 10000) return; // Ignore offline
+                        
+                        // FIX: Allow up to 2 minutes of clock drift for global presence
+                        if (Date.now() - data.time > 120000) return; // Ignore offline
                         
                         if (docSnap.id !== currentUser.uid) {
                             onlineCount++;
