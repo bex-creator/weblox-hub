@@ -1377,11 +1377,13 @@
         // --- VR GLOBALS ---
         let isVRHeadsetMode = false;
         let isVRAttached = false;
+        let isVRRemoteClient = false;
         let vrRemoteQuat = new THREE.Quaternion();
         let stereoEffect, deviceControls;
         let currentGameId = 'hub';
         let currentGameData = null;
         let vrHostSyncInterval = null;
+        let vrHostPosTarget = new THREE.Vector3();
 
         const grappleGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
         const grappleMat = new THREE.LineBasicMaterial({color: 0xff0000});
@@ -1455,6 +1457,7 @@
         });
 
         document.addEventListener('mousemove', (e) => {
+            if (isVRAttached) return; // Prevent mouse fighting VR headset
             if (!isPointerLocked) {
                 if(isRightMouseDown && activeCamera === thirdPersonCamera && !isAccEditorOpen) {
                     cameraYaw -= e.movementX * 0.002;
@@ -2107,11 +2110,12 @@
 
             if (isVRHeadsetMode) {
                 if(deviceControls) deviceControls.update();
+                if(isVRRemoteClient) playerObject.position.lerp(vrHostPosTarget, 0.1);
                 camera.position.copy(playerObject.position);
                 if(stereoEffect) stereoEffect.render(scene, camera);
             } else {
                 if (activeCamera === camera && isVRAttached) {
-                    camera.quaternion.slerp(vrRemoteQuat, 0.5);
+                    camera.quaternion.slerp(vrRemoteQuat, 0.1);
                     const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
                     cameraYaw = euler.y;
                     cameraPitch = euler.x;
@@ -2444,10 +2448,11 @@
             document.getElementById('pause-vr-text').innerText = "VR Code: " + code;
             window.showNotification("Starting VR Host...");
 
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_sessions', code);
+            const hostRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_hosts', code);
+            const clientRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_clients', code);
             
             try {
-                await setDoc(docRef, {
+                await setDoc(hostRef, {
                     gameId: window.currentGameId || 'hub',
                     mapData: window.currentGameData ? window.currentGameData.data : null,
                     hostPos: {x: playerObject.position.x, y: playerObject.position.y, z: playerObject.position.z},
@@ -2460,7 +2465,7 @@
                 return;
             }
 
-            onSnapshot(docRef, (snap) => {
+            onSnapshot(clientRef, (snap) => {
                 if(snap.exists()) {
                     const data = snap.data();
                     if(data.phoneQuat) {
@@ -2476,11 +2481,11 @@
             if(vrHostSyncInterval) clearInterval(vrHostSyncInterval);
             vrHostSyncInterval = setInterval(() => {
                 if(isInGame) {
-                    updateDoc(docRef, {
+                    updateDoc(hostRef, {
                         hostPos: {x: playerObject.position.x, y: playerObject.position.y, z: playerObject.position.z}
                     }).catch(e=>{});
                 }
-            }, 50);
+            }, 250);
         };
 
         window.showVRClientModal = () => { document.getElementById('vr-client-modal').classList.replace('hidden', 'flex'); }
@@ -2500,10 +2505,11 @@
             }
             
             window.showNotification("Checking code " + code + "...");
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_sessions', code);
+            const hostRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_hosts', code);
+            const clientRef = doc(db, 'artifacts', appId, 'public', 'data', 'vr_clients', code);
             
             try {
-                const snap = await getDoc(docRef);
+                const snap = await getDoc(hostRef);
 
                 if(snap.exists()) {
                     const data = snap.data();
@@ -2531,12 +2537,13 @@
                         }
                         
                         isVRHeadsetMode = true;
+                        isVRRemoteClient = true;
                         document.getElementById('hub').style.display = 'none';
                         document.getElementById('game-hud').style.display = 'none';
                         
                         const exitBtn = document.createElement('div');
                         exitBtn.innerHTML = "✕";
-                        exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl";
+                        exitBtn.className = "absolute top-5 right-5 w-12 h-12 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white font-bold z-[9999] cursor-pointer border border-white/30 text-xl shadow-lg";
                         exitBtn.onclick = () => window.location.reload();
                         document.body.appendChild(exitBtn);
 
@@ -2567,18 +2574,21 @@
                             });
                         }
 
-                        onSnapshot(docRef, (s) => {
+                        // Ensure client doc exists
+                        try { await setDoc(clientRef, { timestamp: Date.now() }); } catch(e){}
+
+                        onSnapshot(hostRef, (s) => {
                             if(s.exists() && s.data().hostPos) {
                                 const hp = s.data().hostPos;
-                                playerObject.position.lerp(new THREE.Vector3(hp.x, hp.y, hp.z), 0.5);
+                                vrHostPosTarget.set(hp.x, hp.y, hp.z);
                             }
                         });
 
                         setInterval(() => {
-                            updateDoc(docRef, {
+                            updateDoc(clientRef, {
                                 phoneQuat: { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w }
                             }).catch(e=>{});
-                        }, 50);
+                        }, 250);
                     };
                 } else {
                     window.showNotification("Invalid Code! Host a game on your PC first.");
