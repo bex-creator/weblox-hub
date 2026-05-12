@@ -399,6 +399,7 @@
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">L-Click</b> <span>Use Tool</span></div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">1, 2, 3</b> <span>Equip Tool</span></div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">X</b> <span>TV Mode</span></div>
+            <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">C</b> <span>Recenter ESP32</span></div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">T / Enter</b> <span>Chat</span></div>
             <div class="flex justify-between items-center"><b class="text-white bg-white/10 px-2 py-1 rounded">V</b> <span>Camera</span></div>
         </div>
@@ -1419,6 +1420,11 @@
                 case 'Digit2': window.equipTool(0); break;
                 case 'Digit3': window.equipTool(1); break;
                 case 'Digit4': window.equipTool(2); break;
+                case 'KeyC': 
+                    window.esp32YawOffset = customRightArmY || 0;
+                    window.esp32PitchOffset = customRightArmX || 0;
+                    window.showNotification("ESP32 Hand Controller Recentered!");
+                    break;
                 case 'KeyT': toggleChat(true); e.preventDefault(); break;
                 case 'KeyX': if(isPointerLocked) unlockPointer(); else lockPointer(); break;
                 case 'KeyV': 
@@ -1924,9 +1930,22 @@
                         customRightArmZ = meshGroup.userData.limbs[1].rotation.z;
                     } else if (customRightArmX !== null || customRightArmY !== null || customRightArmZ !== null) {
                         const lerpSpeed = 15 * delta;
-                        if (customRightArmX !== null) meshGroup.userData.limbs[1].rotation.x += (customRightArmX - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
-                        if (customRightArmY !== null) meshGroup.userData.limbs[1].rotation.y += (customRightArmY - meshGroup.userData.limbs[1].rotation.y) * lerpSpeed;
-                        if (customRightArmZ !== null) meshGroup.userData.limbs[1].rotation.z += (customRightArmZ - meshGroup.userData.limbs[1].rotation.z) * lerpSpeed;
+                        
+                        let targetX = customRightArmX !== null ? customRightArmX : 0;
+                        let targetY = customRightArmY !== null ? customRightArmY : 0;
+                        let targetZ = customRightArmZ !== null ? customRightArmZ : 0;
+
+                        // Align ESP32 yaw to player body
+                        let localYaw = targetY - (window.esp32YawOffset || 0) - cameraYaw;
+                        while (localYaw < -Math.PI) localYaw += Math.PI * 2;
+                        while (localYaw > Math.PI) localYaw -= Math.PI * 2;
+
+                        // Offset pitch so "calibration pose" = pointing straight forward (-90 deg)
+                        let localPitch = targetX - (window.esp32PitchOffset || 0) - (Math.PI / 2);
+
+                        if (customRightArmX !== null) meshGroup.userData.limbs[1].rotation.x += (localPitch - meshGroup.userData.limbs[1].rotation.x) * lerpSpeed;
+                        if (customRightArmY !== null) meshGroup.userData.limbs[1].rotation.y += (localYaw - meshGroup.userData.limbs[1].rotation.y) * lerpSpeed;
+                        if (customRightArmZ !== null) meshGroup.userData.limbs[1].rotation.z += (targetZ - meshGroup.userData.limbs[1].rotation.z) * lerpSpeed;
                     }
                 } else {
                     // Smoothly animate the arm for other players watching you
@@ -2700,7 +2719,7 @@
             try {
                 const port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 115200 });
-                window.showNotification("ESP32 Connected! (115200 baud)");
+                window.showNotification("ESP32 Connected! Point at screen and press 'C' to Recenter.");
                 document.getElementById('pause-esp32-text').innerText = "🔌 ESP32 Connected";
 
                 const textDecoder = new TextDecoderStream();
@@ -2723,6 +2742,11 @@
                             if(cmd.startsWith("ARMY:")) customRightArmY = parseFloat(cmd.substring(5));
                             if(cmd.startsWith("ARMZ:")) customRightArmZ = parseFloat(cmd.substring(5));
                             if(cmd === "ARM_RESET") { customRightArmX = null; customRightArmY = null; customRightArmZ = null; }
+                            if(cmd === "RECENTER") {
+                                window.esp32YawOffset = customRightArmY || 0;
+                                window.esp32PitchOffset = customRightArmX || 0;
+                                window.showNotification("ESP32 Controller Recentered!");
+                            }
                             
                             // Optional Tool Triggers
                             if(cmd === "TOOL1") window.equipTool(-1);
