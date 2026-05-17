@@ -2447,8 +2447,8 @@
             setTimeout(() => {
                 document.getElementById('hub').style.display = 'none';
                 document.getElementById('game-hud').style.display = 'flex';
-                document.getElementById('current-game-title').innerText = gameData.name;
-                document.getElementById('current-game-author').innerText = "By " + gameData.author;
+                document.getElementById('current-game-title').innerText = gameData.name || "Unknown Game";
+                document.getElementById('current-game-author').innerText = "By " + (gameData.author || "Unknown Creator");
                 
                 window.currentGameId = gameId;
                 window.currentGameData = gameData;
@@ -2458,10 +2458,20 @@
                 window.clearLevel(false);
                 
                 try {
-                    const parsedData = JSON.parse(gameData.data);
-                    const blocksArray = Array.isArray(parsedData) ? parsedData : parsedData.blocks;
+                    let blocksArray = [];
+                    // Robust Parser: Correctly handles strings, arrays, or nested objects without crashing
+                    let rawData = gameData.data || gameData.blocks || gameData;
+                    if (typeof rawData === 'string') {
+                        try { rawData = JSON.parse(rawData); } catch(e) { console.warn("Failed to parse map string", e); }
+                    }
                     
-                    if (blocksArray) {
+                    if (Array.isArray(rawData)) {
+                        blocksArray = rawData;
+                    } else if (rawData && Array.isArray(rawData.blocks)) {
+                        blocksArray = rawData.blocks;
+                    }
+                    
+                    if (blocksArray && blocksArray.length > 0) {
                         blocksArray.forEach(b => {
                             const px = b.px !== undefined ? b.px : (b.position ? b.position.x : 0);
                             const py = b.py !== undefined ? b.py : (b.position ? b.position.y : 0);
@@ -2469,10 +2479,23 @@
                             const sx = b.sx !== undefined ? b.sx : (b.scale ? b.scale.x : 1);
                             const sy = b.sy !== undefined ? b.sy : (b.scale ? b.scale.y : 1);
                             const sz = b.sz !== undefined ? b.sz : (b.scale ? b.scale.z : 1);
-                            const blockColor = b.colorHex !== undefined ? b.colorHex : (b.color !== undefined ? b.color : 0xffffff);
                             
-                            instantiateBlock(new THREE.Vector3(px, py, pz), b.type, blockColor, b.script, sx, sy, sz);
+                            let blockColor = b.colorHex !== undefined ? b.colorHex : (b.color !== undefined ? b.color : 0xffffff);
+                            // Ensure string hex colors convert seamlessly to integers for Three.js
+                            if (typeof blockColor === 'string' && blockColor.startsWith('#')) {
+                                blockColor = parseInt(blockColor.replace('#', ''), 16);
+                            }
+                            
+                            // Auto-correct casing for block types (e.g. 'spawn' -> 'Spawn')
+                            let bType = b.type || 'Normal';
+                            if (typeof bType === 'string' && bType.length > 0) {
+                                bType = bType.charAt(0).toUpperCase() + bType.slice(1);
+                            }
+                            
+                            instantiateBlock(new THREE.Vector3(px, py, pz), bType, blockColor, b.script, sx, sy, sz);
                         });
+                    } else {
+                        console.warn("Map loaded but contained zero blocks.");
                     }
                 } catch(e) { console.error("Error loading game data", e); }
                 
